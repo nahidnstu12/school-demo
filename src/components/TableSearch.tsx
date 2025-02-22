@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from 'next/image';
 
 const TableSearch = () => {
   return (
@@ -7,7 +7,7 @@ const TableSearch = () => {
       <input
         type="text"
         placeholder="Search..."
-        className="w-[200px] p-2 bg-transparent outline-none"
+        className="w-[200px] p-2 bg-transparent outline-hidden"
       />
     </div>
   );

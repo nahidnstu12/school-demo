@@ -1,27 +1,22 @@
-"use client";
-import Image from "next/image";
-import {
-  RadialBarChart,
-  RadialBar,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+'use client';
+import Image from 'next/image';
+import { RadialBar, RadialBarChart, ResponsiveContainer } from 'recharts';
 
 const data = [
   {
-    name: "Total",
+    name: 'Total',
     count: 106,
-    fill: "white",
+    fill: 'white',
   },
   {
-    name: "Girls",
+    name: 'Girls',
     count: 53,
-    fill: "#FAE27C",
+    fill: '#FAE27C',
   },
   {
-    name: "Boys",
+    name: 'Boys',
     count: 53,
-    fill: "#C3EBFA",
+    fill: '#C3EBFA',
   },
 ];
 
