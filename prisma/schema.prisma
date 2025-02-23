@@ -13,8 +13,366 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// This is the Prisma schema for a complete institution management system
+
+// Basic institution model
+model Institution {
+  id            String   @id @default(cuid())
+  name          String
+  address       String
+  contactNumber String
+  email         String  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  teachers      Teacher[]
+  students      Student[]
+  staffs        Staff[]
+  levels        Level[]
+  notices       Notice[]
+  subjects      Subject[]
+
+  @@index([email])
+}
+
+// User base model for authentication
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String   // Hashed password
+  role          UserRole
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // One-to-one relations with specific user types
+  teacher       Teacher?
+  student       Student?
+  staff         Staff?
+
+  @@index([email])
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
+  STAFF
+}
+
+// Teacher model
+model Teacher {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  institutionId String
+  name          String
+  specialization String?
+  joiningDate   DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id])
+  institution   Institution @relation(fields: [institutionId], references: [id])
+  notices       Notice[]
+  subjects      SubjectTeacher[]
+  routineSlots  RoutineSlot[]
+
+  @@index([institutionId])
+}
+
+// Student model
+model Student {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  institutionId String
+  name          String
+  rollNumber    String
+  joiningDate   DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id])
+  institution   Institution @relation(fields: [institutionId], references: [id])
+  level         Level    @relation(fields: [levelId], references: [id])
+  levelId       String
+  attendances   Attendance[]
+  assignments   AssignmentSubmission[]
+  examResults   ExamResult[]
+
+  @@unique([institutionId, rollNumber])
+  @@index([institutionId])
+  @@index([levelId])
+}
+
+// Staff model
+model Staff {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  institutionId String
+  name          String
+  designation   String
+  joiningDate   DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id])
+  institution   Institution @relation(fields: [institutionId], references: [id])
+
+  @@index([institutionId])
+}
+
+// Level (Class) model
+model Level {
+  id            String   @id @default(cuid())
+  institutionId String
+  name          String
+  hasShift      Boolean @default(false)
+  hasGroup      Boolean @default(false)
+  hasSection    Boolean @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  institution   Institution @relation(fields: [institutionId], references: [id])
+  students      Student[]
+  shifts        Shift[]
+  groups        Group[]
+  sections      Section[]
+  subjects      Subject[]
+  routines      Routine[]
+
+  @@unique([institutionId, name])
+  @@index([institutionId])
+}
+
+// Optional Shift model
+model Shift {
+  id            String   @id @default(cuid())
+  levelId       String
+  name          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  level         Level    @relation(fields: [levelId], references: [id])
+
+  @@unique([levelId, name])
+  @@index([levelId])
+}
+
+// Optional Group model
+model Group {
+  id            String   @id @default(cuid())
+  levelId       String
+  name          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  level         Level    @relation(fields: [levelId], references: [id])
+
+  @@unique([levelId, name])
+  @@index([levelId])
+}
+
+// Optional Section model
+model Section {
+  id            String   @id @default(cuid())
+  levelId       String
+  name          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  level         Level    @relation(fields: [levelId], references: [id])
+
+  @@unique([levelId, name])
+  @@index([levelId])
+}
+
+// Subject model
+model Subject {
+  id            String   @id @default(cuid())
+  institutionId String
+  levelId       String
+  name          String
+  code          String
+  creditHours   Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  institution   Institution @relation(fields: [institutionId], references: [id])
+  level         Level    @relation(fields: [levelId], references: [id])
+  teachers      SubjectTeacher[]
+  assignments   Assignment[]
+  attendances   Attendance[]
+  examResults   ExamResult[]
+  routineSlots  RoutineSlot[]
+
+  @@unique([institutionId, code])
+  @@index([institutionId])
+  @@index([levelId])
+}
+
+// Subject-Teacher relationship model
+model SubjectTeacher {
+  id            String   @id @default(cuid())
+  subjectId     String
+  teacherId     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  subject       Subject  @relation(fields: [subjectId], references: [id])
+  teacher       Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@unique([subjectId, teacherId])
+  @@index([subjectId])
+  @@index([teacherId])
+}
+
+// Weekly Routine model
+model Routine {
+  id            String   @id @default(cuid())
+  levelId       String
+  semester      String
+  startDate     DateTime
+  endDate       DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  level         Level    @relation(fields: [levelId], references: [id])
+  slots         RoutineSlot[]
+
+  @@index([levelId])
+}
+
+// Routine Slot model
+model RoutineSlot {
+  id            String   @id @default(cuid())
+  routineId     String
+  subjectId     String
+  teacherId     String
+  dayOfWeek     Int     // 1-7 for Monday-Sunday
+  startTime     DateTime
+  endTime       DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  routine       Routine  @relation(fields: [routineId], references: [id])
+  subject       Subject  @relation(fields: [subjectId], references: [id])
+  teacher       Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@index([routineId])
+  @@index([subjectId])
+  @@index([teacherId])
+}
+
+// Attendance model
+model Attendance {
+  id            String   @id @default(cuid())
+  subjectId     String
+  studentId     String
+  date          DateTime
+  isPresent     Boolean
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  subject       Subject  @relation(fields: [subjectId], references: [id])
+  student       Student  @relation(fields: [studentId], references: [id])
+
+  @@unique([subjectId, studentId, date])
+  @@index([subjectId])
+  @@index([studentId])
+}
+
+// Assignment model
+model Assignment {
+  id            String   @id @default(cuid())
+  subjectId     String
+  title         String
+  description   String
+  dueDate       DateTime
+  totalMarks    Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  subject       Subject  @relation(fields: [subjectId], references: [id])
+  submissions   AssignmentSubmission[]
+
+  @@index([subjectId])
+}
+
+// Assignment Submission model
+model AssignmentSubmission {
+  id            String   @id @default(cuid())
+  assignmentId  String
+  studentId     String
+  submissionUrl String
+  marks         Float?
+  submittedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  assignment    Assignment @relation(fields: [assignmentId], references: [id])
+  student       Student    @relation(fields: [studentId], references: [id])
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId])
+  @@index([studentId])
+}
+
+// Exam Result model
+model ExamResult {
+  id            String   @id @default(cuid())
+  subjectId     String
+  studentId     String
+  examType      String   // Midterm, Final, etc.
+  marks         Float
+  grade         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  subject       Subject  @relation(fields: [subjectId], references: [id])
+  student       Student  @relation(fields: [studentId], references: [id])
+
+  @@unique([subjectId, studentId, examType])
+  @@index([subjectId])
+  @@index([studentId])
+}
+
+// Notice model
+model Notice {
+  id            String   @id @default(cuid())
+  institutionId String
+  teacherId     String?
+  title         String
+  content       String
+  type          NoticeType
+  levelId       String?  // Required for TEACHER type notices
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  institution   Institution @relation(fields: [institutionId], references: [id])
+  teacher       Teacher?    @relation(fields: [teacherId], references: [id])
+
+  @@index([institutionId])
+  @@index([teacherId])
+  @@index([levelId])
+}
+
+enum NoticeType {
+  GLOBAL
+  TEACHER
 }
