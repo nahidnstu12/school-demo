@@ -1,9 +1,9 @@
-import FormModal from "@/components/FormModal";
-import Pagination from "@/components/Pagination";
-import Table from "@/components/Table";
-import TableSearch from "@/components/TableSearch";
-import { parentsData, role } from "@/lib/data";
-import Image from "next/image";
+import FormModal from '@/components/FormModal';
+import Pagination from '@/components/Pagination';
+import Table from '@/components/Table';
+import TableSearch from '@/components/TableSearch';
+import { parentsData, role } from '@/lib/data';
+import Image from 'next/image';
 
 type Parent = {
   id: number;
@@ -16,27 +16,27 @@ type Parent = {
 
 const columns = [
   {
-    header: "Info",
-    accessor: "info",
+    header: 'Info',
+    accessor: 'info',
   },
   {
-    header: "Student Names",
-    accessor: "students",
-    className: "hidden md:table-cell",
+    header: 'Student Names',
+    accessor: 'students',
+    className: 'hidden md:table-cell',
   },
   {
-    header: "Phone",
-    accessor: "phone",
-    className: "hidden lg:table-cell",
+    header: 'Phone',
+    accessor: 'phone',
+    className: 'hidden lg:table-cell',
   },
   {
-    header: "Address",
-    accessor: "address",
-    className: "hidden lg:table-cell",
+    header: 'Address',
+    accessor: 'address',
+    className: 'hidden lg:table-cell',
   },
   {
-    header: "Actions",
-    accessor: "action",
+    header: 'Actions',
+    accessor: 'action',
   },
 ];
 
@@ -52,15 +52,23 @@ const ParentListPage = () => {
           <p className="text-xs text-gray-500">{item?.email}</p>
         </div>
       </td>
-      <td className="hidden md:table-cell">{item.students.join(",")}</td>
+      <td className="hidden md:table-cell">{item.students.join(',')}</td>
       <td className="hidden md:table-cell">{item.phone}</td>
       <td className="hidden md:table-cell">{item.address}</td>
       <td>
         <div className="flex items-center gap-2">
-          {role === "admin" && (
+          {role === 'admin' && (
             <>
-              <FormModal table="parent" type="update" data={item} />
-              <FormModal table="parent" type="delete" id={item.id} />
+              <FormModal
+                table="parent"
+                type="update"
+                data={item}
+              />
+              <FormModal
+                table="parent"
+                type="delete"
+                id={item.id}
+              />
             </>
           )}
         </div>
@@ -77,19 +85,36 @@ const ParentListPage = () => {
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
+              <Image
+                src="/filter.png"
+                alt=""
+                width={14}
+                height={14}
+              />
             </button>
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
+              <Image
+                src="/sort.png"
+                alt=""
+                width={14}
+                height={14}
+              />
             </button>
-            {role === "admin" && (
-              <FormModal table="teacher" type="create"/>
+            {role === 'admin' && (
+              <FormModal
+                table="teacher"
+                type="create"
+              />
             )}
           </div>
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={parentsData} />
+      <Table
+        columns={columns}
+        renderRow={renderRow}
+        data={parentsData}
+      />
       {/* PAGINATION */}
       <Pagination />
     </div>

@@ -4,7 +4,7 @@ import { PostService } from '@/services/post.service';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 // import { authOptions } from '@/lib/auth';
-import { CreatePostDTO, UpdatePostDTO } from '@/types/post';
+import type { CreatePostDTO, UpdatePostDTO } from '@/types/post';
 
 const postService = new PostService();
 
@@ -14,7 +14,9 @@ type ActionResponse<T> = {
   error?: string;
 };
 
-export async function createPost(formData: FormData): Promise<ActionResponse<CreatePostDTO>> {
+export async function createPost(
+  formData: FormData
+): Promise<ActionResponse<CreatePostDTO>> {
   // const session = await getServerSession(authOptions);
 
   // if (!session) {

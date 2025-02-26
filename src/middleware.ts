@@ -8,10 +8,15 @@ export async function middleware(request: NextRequest) {
 
   const protectedPaths = ['/posts/create', '/posts/edit'];
 
-  if (protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path))) {
+  if (
+    protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path))
+  ) {
     const token = await getToken({ req: request });
 
-    console.log('👤 Auth status:', token ? 'Authenticated' : 'Not authenticated');
+    console.log(
+      '👤 Auth status:',
+      token ? 'Authenticated' : 'Not authenticated'
+    );
 
     if (!token) {
       const url = new URL('/api/auth/signin', request.url);

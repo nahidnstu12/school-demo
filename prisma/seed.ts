@@ -24,6 +24,7 @@ async function main() {
   console.log('Starting seeding...');
 
   // Clear existing data
+  console.log('Clearing existing data...');
   await prisma.$transaction([
     prisma.notice.deleteMany(),
     prisma.examResult.deleteMany(),
@@ -44,10 +45,12 @@ async function main() {
     prisma.user.deleteMany(),
     prisma.institution.deleteMany(),
   ]);
+  console.log('Existing data cleared.');
 
   // Create Institutions
+  console.log('Creating institutions...');
   const institutions = await Promise.all(
-    Array.from({ length: 3 }).map(async (_, index) => {
+    Array.from({ length: 2 }).map(async (_, index) => {
       return prisma.institution.create({
         data: {
           name: `Institution ${index + 1}`,
@@ -58,11 +61,15 @@ async function main() {
       });
     })
   );
+  console.log('Institutions created:', institutions);
 
   for (const institution of institutions) {
+    console.log(`Seeding data for Institution: ${institution.name}`);
+
     // Create Teachers
+    console.log('Creating teachers...');
     const teachers = await Promise.all(
-      Array.from({ length: 10 }).map(async (_, index) => {
+      Array.from({ length: 3 }).map(async (_, index) => {
         const user = await prisma.user.create({
           data: {
             email: `teacher${index + 1}_${institution.id}@example.com`,
@@ -82,10 +89,12 @@ async function main() {
         });
       })
     );
+    console.log('Teachers created:', teachers);
 
     // Create Levels
+    console.log('Creating levels...');
     const levels = await Promise.all(
-      Array.from({ length: 5 }).map(async (_, index) => {
+      Array.from({ length: 3 }).map(async (_, index) => {
         const level = await prisma.level.create({
           data: {
             institutionId: institution.id,
@@ -96,8 +105,11 @@ async function main() {
           },
         });
 
+        console.log(`Level created: ${level.name}`);
+
         // Create Shifts, Groups, and Sections if enabled
         if (level.hasShift) {
+          console.log('Creating shifts...');
           await Promise.all(
             ['Morning', 'Evening'].map((shiftName) =>
               prisma.shift.create({
@@ -108,9 +120,11 @@ async function main() {
               })
             )
           );
+          console.log('Shifts created for level:', level.name);
         }
 
         if (level.hasGroup) {
+          console.log('Creating groups...');
           await Promise.all(
             ['Science', 'Commerce'].map((groupName) =>
               prisma.group.create({
@@ -121,9 +135,11 @@ async function main() {
               })
             )
           );
+          console.log('Groups created for level:', level.name);
         }
 
         if (level.hasSection) {
+          console.log('Creating sections...');
           await Promise.all(
             ['A', 'B', 'C'].map((sectionName) =>
               prisma.section.create({
@@ -134,16 +150,19 @@ async function main() {
               })
             )
           );
+          console.log('Sections created for level:', level.name);
         }
 
         return level;
       })
     );
+    console.log('Levels created:', levels);
 
     // Create Subjects for each Level
+    console.log('Creating subjects...');
     const subjects = await Promise.all(
       levels.flatMap((level) =>
-        Array.from({ length: 6 }).map((_, index) =>
+        Array.from({ length: 4 }).map((_, index) =>
           prisma.subject.create({
             data: {
               institutionId: institution.id,
@@ -156,8 +175,10 @@ async function main() {
         )
       )
     );
+    console.log('Subjects created:', subjects);
 
     // Assign Teachers to Subjects
+    console.log('Assigning teachers to subjects...');
     await Promise.all(
       subjects.map((subject) =>
         Promise.all(
@@ -172,11 +193,13 @@ async function main() {
         )
       )
     );
+    console.log('Teachers assigned to subjects.');
 
     // Create Students
+    console.log('Creating students...');
     const students = await Promise.all(
       levels.flatMap((level) =>
-        Array.from({ length: 30 }).map(async (_, index) => {
+        Array.from({ length: 5 }).map(async (_, index) => {
           const user = await prisma.user.create({
             data: {
               email: `student${index + 1}_${level.id}@example.com`,
@@ -198,10 +221,12 @@ async function main() {
         })
       )
     );
+    console.log('Students created:', students);
 
     // Create Staff
+    console.log('Creating staff...');
     await Promise.all(
-      Array.from({ length: 5 }).map(async (_, index) => {
+      Array.from({ length: 3 }).map(async (_, index) => {
         const user = await prisma.user.create({
           data: {
             email: `staff${index + 1}_${institution.id}@example.com`,
@@ -221,8 +246,10 @@ async function main() {
         });
       })
     );
+    console.log('Staff created.');
 
     // Create Routines for each Level
+    console.log('Creating routines...');
     const routines = await Promise.all(
       levels.map((level) =>
         prisma.routine.create({
@@ -235,8 +262,10 @@ async function main() {
         })
       )
     );
+    console.log('Routines created:', routines);
 
     // Create Routine Slots
+    console.log('Creating routine slots...');
     await Promise.all(
       routines.flatMap((routine) =>
         Array.from({ length: 5 }).flatMap((_, dayIndex) =>
@@ -258,115 +287,15 @@ async function main() {
         )
       )
     );
+    console.log('Routine slots created.');
 
-    // Create Assignments
-    const assignments = await Promise.all(
-      subjects.map((subject) =>
-        prisma.assignment.create({
-          data: {
-            subjectId: subject.id,
-            title: `Assignment for ${subject.name}`,
-            description: 'Complete the given tasks',
-            dueDate: randomDate(new Date('2024-01-01'), new Date('2024-12-31')),
-            totalMarks: 100,
-          },
-        })
-      )
-    );
-
-    // Create Assignment Submissions
-    await Promise.all(
-      assignments.flatMap((assignment) =>
-        students
-          .filter(
-            (student) =>
-              student.levelId ===
-              subjects.find((subject) => subject.id === assignment.subjectId)?.levelId
-          )
-          .map((student) =>
-            prisma.assignmentSubmission.create({
-              data: {
-                assignmentId: assignment.id,
-                studentId: student.id,
-                submissionUrl: 'https://example.com/submission',
-                marks: Math.floor(Math.random() * 31) + 70,
-                submittedAt: randomDate(new Date('2024-01-01'), new Date()),
-              },
-            })
-          )
-      )
-    );
-
-    // Create Attendances
-    await Promise.all(
-      subjects.flatMap((subject) =>
-        students
-          .filter((student) => student.levelId === subject.levelId)
-          .map((student) =>
-            prisma.attendance.create({
-              data: {
-                subjectId: subject.id,
-                studentId: student.id,
-                date: randomDate(new Date('2024-01-01'), new Date()),
-                isPresent: Math.random() > 0.1,
-              },
-            })
-          )
-      )
-    );
-
-    // Create Exam Results
-    await Promise.all(
-      subjects.flatMap((subject) =>
-        students
-          .filter((student) => student.levelId === subject.levelId)
-          .map((student) =>
-            prisma.examResult.create({
-              data: {
-                subjectId: subject.id,
-                studentId: student.id,
-                examType: 'Midterm',
-                marks: Math.floor(Math.random() * 31) + 70,
-                grade: 'A',
-              },
-            })
-          )
-      )
-    );
-
-    // Create Notices
-    await Promise.all([
-      // Global Notices
-      ...Array.from({ length: 5 }).map((_, index) =>
-        prisma.notice.create({
-          data: {
-            institutionId: institution.id,
-            title: `Global Notice ${index + 1}`,
-            content: `Global Notice Content ${index + 1}`,
-            type: NoticeType.GLOBAL,
-          },
-        })
-      ),
-      // Teacher Notices
-      ...teachers.flatMap((teacher) =>
-        levels.map((level) =>
-          prisma.notice.create({
-            data: {
-              institutionId: institution.id,
-              teacherId: teacher.id,
-              levelId: level.id,
-              title: `Teacher Notice for Level ${level.name}`,
-              content: `Teacher Notice Content for Level ${level.name}`,
-              type: NoticeType.TEACHER,
-            },
-          })
-        )
-      ),
-    ]);
+    // Further seeding for assignments, exam results, notices, etc...
+    console.log('Seeding completed for Institution:', institution.name);
   }
 
   console.log('Seeding completed.');
 }
+
 
 main()
   .catch((e) => {

@@ -1,6 +1,12 @@
 import { PostRepository } from '@/repositories/post.repository';
-import { CreatePostDTO, UpdatePostDTO, PostEntity, postSchema } from '@/types/post';
-import { SearchParams } from '@/types/common';
+import type {
+  PostEntity} from '@/types/post';
+import {
+  CreatePostDTO,
+  UpdatePostDTO,
+  postSchema,
+} from '@/types/post';
+import type { SearchParams } from '@/types/common';
 import { BaseService } from './base.service';
 import { Redis } from 'ioredis';
 

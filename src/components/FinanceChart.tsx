@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import Image from "next/image";
+import Image from 'next/image';
 import {
   LineChart,
   Line,
@@ -10,66 +10,66 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from "recharts";
+} from 'recharts';
 
 const data = [
   {
-    name: "Jan",
+    name: 'Jan',
     income: 4000,
     expense: 2400,
   },
   {
-    name: "Feb",
+    name: 'Feb',
     income: 3000,
     expense: 1398,
   },
   {
-    name: "Mar",
+    name: 'Mar',
     income: 2000,
     expense: 9800,
   },
   {
-    name: "Apr",
+    name: 'Apr',
     income: 2780,
     expense: 3908,
   },
   {
-    name: "May",
+    name: 'May',
     income: 1890,
     expense: 4800,
   },
   {
-    name: "Jun",
+    name: 'Jun',
     income: 2390,
     expense: 3800,
   },
   {
-    name: "Jul",
+    name: 'Jul',
     income: 3490,
     expense: 4300,
   },
   {
-    name: "Aug",
+    name: 'Aug',
     income: 3490,
     expense: 4300,
   },
   {
-    name: "Sep",
+    name: 'Sep',
     income: 3490,
     expense: 4300,
   },
   {
-    name: "Oct",
+    name: 'Oct',
     income: 3490,
     expense: 4300,
   },
   {
-    name: "Nov",
+    name: 'Nov',
     income: 3490,
     expense: 4300,
   },
   {
-    name: "Dec",
+    name: 'Dec',
     income: 3490,
     expense: 4300,
   },
@@ -80,9 +80,17 @@ const FinanceChart = () => {
     <div className="bg-white rounded-xl w-full h-full p-4">
       <div className="flex justify-between items-center">
         <h1 className="text-lg font-semibold">Finance</h1>
-        <Image src="/moreDark.png" alt="" width={20} height={20} />
+        <Image
+          src="/moreDark.png"
+          alt=""
+          width={20}
+          height={20}
+        />
       </div>
-      <ResponsiveContainer width="100%" height="90%">
+      <ResponsiveContainer
+        width="100%"
+        height="90%"
+      >
         <LineChart
           width={500}
           height={300}
@@ -94,20 +102,28 @@ const FinanceChart = () => {
             bottom: 5,
           }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#ddd" />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="#ddd"
+          />
           <XAxis
             dataKey="name"
             axisLine={false}
-            tick={{ fill: "#d1d5db" }}
+            tick={{ fill: '#d1d5db' }}
             tickLine={false}
             tickMargin={10}
           />
-          <YAxis axisLine={false} tick={{ fill: "#d1d5db" }} tickLine={false}  tickMargin={20}/>
+          <YAxis
+            axisLine={false}
+            tick={{ fill: '#d1d5db' }}
+            tickLine={false}
+            tickMargin={20}
+          />
           <Tooltip />
           <Legend
             align="center"
             verticalAlign="top"
-            wrapperStyle={{ paddingTop: "10px", paddingBottom: "30px" }}
+            wrapperStyle={{ paddingTop: '10px', paddingBottom: '30px' }}
           />
           <Line
             type="monotone"
@@ -115,7 +131,12 @@ const FinanceChart = () => {
             stroke="#C3EBFA"
             strokeWidth={5}
           />
-          <Line type="monotone" dataKey="expense" stroke="#CFCEFF" strokeWidth={5}/>
+          <Line
+            type="monotone"
+            dataKey="expense"
+            stroke="#CFCEFF"
+            strokeWidth={5}
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>

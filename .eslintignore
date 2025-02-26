@@ -1,5 +1,0 @@
-# .eslintignore
-*.config.js
-.eslintrc.js
-.lintstagedrc.js
-.next.config.ts

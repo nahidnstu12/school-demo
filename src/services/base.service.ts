@@ -1,5 +1,5 @@
-import { BaseRepository } from '@/repositories/base.repository';
-import { PaginatedResponse, SearchParams } from '@/types/common';
+import type { BaseRepository } from '@/repositories/base.repository';
+import type { PaginatedResponse, SearchParams } from '@/types/common';
 
 export abstract class BaseService<T> {
   protected repository: BaseRepository<T>;

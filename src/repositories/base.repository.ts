@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { PaginatedResponse, SearchParams } from '@/types/common';
+import type { PaginatedResponse, SearchParams } from '@/types/common';
 
 export abstract class BaseRepository<T> {
   protected prisma: PrismaClient;
@@ -12,7 +12,12 @@ export abstract class BaseRepository<T> {
   }
 
   async findAll(params: SearchParams): Promise<PaginatedResponse<T>> {
-    const { page = 1, limit = 10, orderBy = { createdAt: 'desc' }, filters = {} } = params;
+    const {
+      page = 1,
+      limit = 10,
+      orderBy = { createdAt: 'desc' },
+      filters = {},
+    } = params;
 
     const skip = (page - 1) * limit;
 

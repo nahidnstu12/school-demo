@@ -29,7 +29,9 @@ export function PostForm({ post, categories, tags }: PostFormProps) {
         return;
       }
 
-      const result = post?.id ? await updatePost(post.id, formData) : await createPost(formData);
+      const result = post?.id
+        ? await updatePost(post.id, formData)
+        : await createPost(formData);
 
       if (result.success) {
         toast.success('Post saved successfully');
@@ -41,9 +43,15 @@ export function PostForm({ post, categories, tags }: PostFormProps) {
   });
 
   return (
-    <form {...form.props} className="space-y-6">
+    <form
+      {...form.props}
+      className="space-y-6"
+    >
       <div>
-        <label htmlFor={fields.title.id} className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor={fields.title.id}
+          className="block text-sm font-medium text-gray-700"
+        >
           Title
         </label>
         <input
@@ -51,11 +59,16 @@ export function PostForm({ post, categories, tags }: PostFormProps) {
           type="text"
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         />
-        {fields.title.error && <p className="mt-2 text-sm text-red-600">{fields.title.error}</p>}
+        {fields.title.error && (
+          <p className="mt-2 text-sm text-red-600">{fields.title.error}</p>
+        )}
       </div>
 
       <div>
-        <label htmlFor={fields.content.id} className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor={fields.content.id}
+          className="block text-sm font-medium text-gray-700"
+        >
           Content
         </label>
         <textarea
@@ -70,18 +83,27 @@ export function PostForm({ post, categories, tags }: PostFormProps) {
 
       <div>
         <fieldset>
-          <legend className="text-sm font-medium text-gray-700">Categories</legend>
+          <legend className="text-sm font-medium text-gray-700">
+            Categories
+          </legend>
           <div className="mt-2 space-y-2">
             {categories.map((category) => (
-              <label key={category.id} className="inline-flex items-center">
+              <label
+                key={category.id}
+                className="inline-flex items-center"
+              >
                 <input
                   type="checkbox"
                   name="categories"
                   value={category.id}
-                  defaultChecked={post?.categories?.some((c) => c.id === category.id)}
+                  defaultChecked={post?.categories?.some(
+                    (c) => c.id === category.id
+                  )}
                   className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
-                <span className="ml-2 text-sm text-gray-700">{category.name}</span>
+                <span className="ml-2 text-sm text-gray-700">
+                  {category.name}
+                </span>
               </label>
             ))}
           </div>
@@ -93,7 +115,10 @@ export function PostForm({ post, categories, tags }: PostFormProps) {
           <legend className="text-sm font-medium text-gray-700">Tags</legend>
           <div className="mt-2 space-y-2">
             {tags.map((tag) => (
-              <label key={tag.id} className="inline-flex items-center">
+              <label
+                key={tag.id}
+                className="inline-flex items-center"
+              >
                 <input
                   type="checkbox"
                   name="tags"

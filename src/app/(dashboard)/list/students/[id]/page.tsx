@@ -1,8 +1,8 @@
-import Announcements from "@/components/Announcements";
-import BigCalendar from "@/components/BigCalender";
-import Performance from "@/components/Performance";
-import Image from "next/image";
-import Link from "next/link";
+import Announcements from '@/components/Announcements';
+import BigCalendar from '@/components/BigCalender';
+import Performance from '@/components/Performance';
+import Image from 'next/image';
+import Link from 'next/link';
 
 const SingleStudentPage = () => {
   return (
@@ -29,19 +29,39 @@ const SingleStudentPage = () => {
               </p>
               <div className="flex items-center justify-between gap-2 flex-wrap text-xs font-medium">
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
-                  <Image src="/blood.png" alt="" width={14} height={14} />
+                  <Image
+                    src="/blood.png"
+                    alt=""
+                    width={14}
+                    height={14}
+                  />
                   <span>A+</span>
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
-                  <Image src="/date.png" alt="" width={14} height={14} />
+                  <Image
+                    src="/date.png"
+                    alt=""
+                    width={14}
+                    height={14}
+                  />
                   <span>January 2025</span>
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
-                  <Image src="/mail.png" alt="" width={14} height={14} />
+                  <Image
+                    src="/mail.png"
+                    alt=""
+                    width={14}
+                    height={14}
+                  />
                   <span>user@gmail.com</span>
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
-                  <Image src="/phone.png" alt="" width={14} height={14} />
+                  <Image
+                    src="/phone.png"
+                    alt=""
+                    width={14}
+                    height={14}
+                  />
                   <span>+1 234 567</span>
                 </div>
               </div>
@@ -118,19 +138,34 @@ const SingleStudentPage = () => {
         <div className="bg-white p-4 rounded-md">
           <h1 className="text-xl font-semibold">Shortcuts</h1>
           <div className="mt-4 flex gap-4 flex-wrap text-xs text-gray-500">
-            <Link className="p-3 rounded-md bg-lamaSkyLight" href="/">
+            <Link
+              className="p-3 rounded-md bg-lamaSkyLight"
+              href="/"
+            >
               Student&apos;s Lessons
             </Link>
-            <Link className="p-3 rounded-md bg-lamaPurpleLight" href="/">
+            <Link
+              className="p-3 rounded-md bg-lamaPurpleLight"
+              href="/"
+            >
               Student&apos;s Teachers
             </Link>
-            <Link className="p-3 rounded-md bg-pink-50" href="/">
+            <Link
+              className="p-3 rounded-md bg-pink-50"
+              href="/"
+            >
               Student&apos;s Exams
             </Link>
-            <Link className="p-3 rounded-md bg-lamaSkyLight" href="/">
+            <Link
+              className="p-3 rounded-md bg-lamaSkyLight"
+              href="/"
+            >
               Student&apos;s Assignments
             </Link>
-            <Link className="p-3 rounded-md bg-lamaYellowLight" href="/">
+            <Link
+              className="p-3 rounded-md bg-lamaYellowLight"
+              href="/"
+            >
               Student&apos;s Results
             </Link>
           </div>

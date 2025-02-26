@@ -1,5 +1,5 @@
 import { settings } from '@/config/settings';
-import { Redis } from 'ioredis';
+import type { Redis } from 'ioredis';
 
 export class CacheManager {
   private redis: Redis;
@@ -19,7 +19,11 @@ export class CacheManager {
     return data ? JSON.parse(data) : null;
   }
 
-  async set<T>(key: string, value: T, ttl: number = settings.cache.ttl): Promise<void> {
+  async set<T>(
+    key: string,
+    value: T,
+    ttl: number = settings.cache.ttl
+  ): Promise<void> {
     await this.redis.setex(this.getKey(key), ttl, JSON.stringify(value));
   }
 

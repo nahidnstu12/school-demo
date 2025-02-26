@@ -1,4 +1,4 @@
-import { FieldError } from "react-hook-form";
+import type { FieldError } from 'react-hook-form';
 
 type InputFieldProps = {
   label: string;
@@ -12,7 +12,7 @@ type InputFieldProps = {
 
 const InputField = ({
   label,
-  type = "text",
+  type = 'text',
   register,
   name,
   defaultValue,
