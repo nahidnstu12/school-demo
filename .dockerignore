@@ -1,5 +1,7 @@
-# dependencies
-/node_modules
+.prisma
+.env
+.next
+node_modules
 /.pnp
 .pnp.js
 

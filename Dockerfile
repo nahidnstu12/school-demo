@@ -3,7 +3,9 @@ FROM oven/bun:1.2.3
 WORKDIR /app
 
 COPY package.json bun.lockb ./
-RUN bun install --backend=copyfile
+
+RUN bun install --frozen-lockfile
+
 COPY . .
 
 RUN bunx prisma generate --schema=prisma/schema.mysql.prisma

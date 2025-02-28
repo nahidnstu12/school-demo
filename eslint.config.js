@@ -14,20 +14,21 @@ export default [
   // TypeScript rules
   {
     languageOptions: {
-      parser: tsParser, // Use TypeScript parser
+      parser: tsParser,
       parserOptions: {
-        project: './tsconfig.json', // Ensure ESLint reads TSConfig
+        project: './tsconfig.json',
         sourceType: 'module',
         ecmaVersion: 'latest',
       },
     },
     plugins: { '@typescript-eslint': tsPlugin },
     rules: {
-      ...tsPlugin.configs.recommended.rules, // TypeScript recommended rules
+      ...tsPlugin.configs.recommended.rules,
       '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn', // Discourage `any` type
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/consistent-type-imports': 'warn', // Prefer `import type {}` syntax
+      '@typescript-eslint/consistent-type-imports': 'warn',
+      '--no-warn-ignored': 'off',
     },
   },
 
@@ -35,17 +36,17 @@ export default [
   pluginReact.configs.flat.recommended,
   {
     plugins: { 'react-hooks': fixupPluginRules(pluginReactHooks) },
-    rules: { ...pluginReactHooks.configs.recommended.rules },
+    rules: { ...pluginReactHooks.configs.recommended.rules, '--no-warn-ignored': 'off' },
   },
   {
     settings: { react: { version: 'detect' } },
     rules: {
       'react/react-in-jsx-scope': 'off',
-      'react/jsx-uses-react': 'error',
+      'react/jsx-uses-react': 'off',
       'react/jsx-uses-vars': 'error',
       'no-undef': 'error',
       'no-useless-escape': 'off',
-      'react/prop-types': 'off', // No need for PropTypes in TypeScript
+      'react/prop-types': 'off',
       'no-unused-vars': 'warn',
       'no-var': 'warn',
       'react/jsx-no-duplicate-props': 'warn',
@@ -57,6 +58,7 @@ export default [
       'react/require-render-return': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'react/display-name': 'off',
+      '--no-warn-ignored': 'off',
     },
   },
 
@@ -81,21 +83,5 @@ export default [
         Bun: 'readonly',
       },
     },
-  },
-
-  // Ignored files & directories
-  {
-    ignores: [
-      '.next/', // Ignore Next.js build output
-      'node_modules/', // Ignore dependencies
-      'dist/', // Ignore build output
-      'out/', // Ignore Next.js static export folder
-      'coverage/', // Ignore test coverage reports
-      '**/*.min.js', // Ignore minified JS files
-      '**/vendor/**', // Ignore vendor files
-      '**/public/**', // Ignore public assets
-      './next.config.mjs',
-      './eslint.config.js',
-    ],
   },
 ];
