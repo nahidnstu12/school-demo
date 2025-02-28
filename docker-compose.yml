@@ -1,26 +1,7 @@
 services:
-  school-demo:
-    container_name: school-demo
-    build:
-      context: .
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ""
-    volumes:
-      - .:/app
-    restart: always
-    ports:
-      - 3000:3000
-    depends_on:
-      - mysql
-      # - redis
-
   mysql:
     image: mysql:8.0
+    container_name: mysql
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -38,6 +19,7 @@ services:
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
     restart: always
     ports:
       - "8080:80"

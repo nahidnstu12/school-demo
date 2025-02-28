@@ -1,7 +1,7 @@
-const { heroui } = require('@heroui/react');
+import { heroui } from '@heroui/react';
 
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+const config = {
   content: [
     './src/app/**/*.{ts,tsx}', // Next.js app router
     './src/components/**/*.{ts,tsx}', // Components folder
@@ -15,6 +15,13 @@ module.exports = {
       },
     },
   },
+  safelist: [
+    {
+      pattern: /bg-(gray|blue|red|green|yellow|indigo|purple|pink)-(500|600|700|800)/,
+    },
+  ],
   darkMode: 'class',
   plugins: [heroui()],
 };
+
+export default config;
