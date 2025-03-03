@@ -17,7 +17,7 @@ class UserServerAction extends BaseServerAction<z.infer<typeof userSchema>> {
     | { success: true; user: any }
     | { success: false; errors: { field: string | number; message: string }[] }
   > {
-    console.log(formData, 'server action formd data');
+    console.log(formData, 'server action form data');
     const validatedData = this.validateFormData(formData);
 
     if (!validatedData.success) return validatedData;
@@ -26,5 +26,10 @@ class UserServerAction extends BaseServerAction<z.infer<typeof userSchema>> {
     return { success: true, user };
   }
 }
+const userActionInstance = new UserServerAction();
 
-export default UserServerAction;
+export async function createUser(formData: FormData) {
+  return userActionInstance.createUser(formData);
+}
+
+// export default userActionInstance;

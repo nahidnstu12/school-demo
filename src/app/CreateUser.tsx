@@ -1,38 +1,32 @@
 'use client';
-import React from 'react';
-// import { Form } from '@heroui/form';
-// import { useState } from 'react';
+
+import React, { useState } from 'react';
+import { Button } from '@heroui/button';
 import { Input } from '@heroui/input';
 import { Select, SelectItem } from '@heroui/select';
-import { Button } from '@heroui/button';
-// import { Card, CardHeader, CardBody } from '@heroui/card';
 
-// import { useForm } from 'react-hook-form';
-// import { zodResolver } from '@hookform/resolvers/zod';
-// import { userSchema } from '@/types/user';
-import UserServerAction from '@/actions/user.action';
+import { createUser } from '@/actions/user.action';
+import { UserRole } from '@prisma/client';
 
 const roles = [
-  { key: 'teacher', label: 'Teacher' },
-  { key: 'student', label: 'Student' },
-  { key: 'staff', label: 'Staff' },
+  { key: UserRole.TEACHER, label: 'Teacher' },
+  { key: UserRole.STUDENT, label: 'Student' },
+  { key: UserRole.STAFF, label: 'Staff' },
 ];
-export default function CreateUserForm() {
-  // const [serverErrors, setServerErrors] = useState(null);
-  // const [email, setEmail] = useState('');
-  // const [role, setRole] = useState('');
-  // const [submitted, setSubmitted] = useState(false);
 
-  // const form = useForm({
-  //   resolver: zodResolver(userSchema),
-  //   defaultValues: { email: '', password: '', role: 'STUDENT' },
-  // });
+export default function CreateUserForm() {
+  const [selectedRole, setSelectedRole] = useState('');
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     // 🔹 Convert to FormData for Server Action
     const formDataObject = new FormData(e.currentTarget);
+
+    // 🔹 Manually add the role value to FormData
+    if (selectedRole) {
+      formDataObject.set('role', selectedRole);
+    }
 
     // 🔹 Log FormData before submitting
     console.log('📌 FormData Contents:');
@@ -41,7 +35,7 @@ export default function CreateUserForm() {
     }
 
     // 🔹 Call Server Action
-    const result = await new UserServerAction().createUser(formDataObject);
+    const result = await createUser(formDataObject);
 
     if (!result.success) {
       console.error('❌ Server Errors:', result.errors);
@@ -53,7 +47,6 @@ export default function CreateUserForm() {
   return (
     <div className="max-w-lg mx-auto bg-white rounded-lg shadow-md min-h-screen flex flex-col items-center justify-center">
       <h2 className="text-xl font-semibold mb-4">Register User</h2>
-      {/* <Form {...form}> */}
       <form onSubmit={onSubmit} className="space-y-12 w-full">
         {/* Email Field */}
         <Input
@@ -81,9 +74,21 @@ export default function CreateUserForm() {
           name="password"
         />
 
-        <Select className="" label="Select a role">
+        {/* Role Selection - Fixed to include name and onChange */}
+        <Select
+          label="Select a role"
+          name="role"
+          selectedKeys={selectedRole ? [selectedRole] : []}
+          onSelectionChange={(keys) => {
+            // Convert the Set to a string (assuming single selection)
+            const selected = Array.from(keys)[0]?.toString() || '';
+            setSelectedRole(selected);
+          }}
+        >
           {roles.map((role) => (
-            <SelectItem key={role.key}>{role.label}</SelectItem>
+            <SelectItem key={role.key} value={role.key}>
+              {role.label}
+            </SelectItem>
           ))}
         </Select>
 
@@ -91,17 +96,7 @@ export default function CreateUserForm() {
         <Button type="submit" className="w-full">
           Register
         </Button>
-
-        {/* Server Side Errors */}
-        {/* {serverErrors && (
-            <div className="text-red-500 text-sm mt-2">
-              {Object.values(serverErrors).map((msg, index) => (
-                <p key={index}>{msg}</p>
-              ))}
-            </div>
-          )} */}
       </form>
-      {/* </Form> */}
     </div>
   );
 }

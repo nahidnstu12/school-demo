@@ -1,6 +1,5 @@
 # Variables 
 DOCKER_COMPOSE = docker compose -f docker-compose.yml
-CONTAINER_NAME = school-demo
 REDIS_CONTAINER = redis
 DB_CONTAINER = mysql
 DB_USER ?= root
@@ -25,11 +24,11 @@ grant-all:
 
 # [[Prisma]] Migrate with timestamp
 migrate:
-	$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) bunx prisma migrate dev --name $(TIMESTAMP) --skip-seed --skip-generate --schema=$(SCHEMA)
+	$(DOCKER_COMPOSE) run --rm $(DB_CONTAINER) bunx prisma migrate dev --name $(TIMESTAMP) --skip-seed --skip-generate --schema=$(SCHEMA)
 
 # [[Prisma]] Push schema to database
 push:
-	$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) bunx prisma db push --accept-data-loss --skip-generate --schema=$(SCHEMA)
+	$(DOCKER_COMPOSE) run --rm $(DB_CONTAINER) bunx prisma db push --accept-data-loss --skip-generate --schema=$(SCHEMA)
 
 # [[Prisma]] Local Generate Prisma client
 local_generate:
@@ -37,19 +36,19 @@ local_generate:
 
 # [[Prisma]] Generate Prisma client
 generate:
-	$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) bunx prisma generate --schema=$(SCHEMA)
+	$(DOCKER_COMPOSE) run --rm $(DB_CONTAINER) bunx prisma generate --schema=$(SCHEMA)
 
 # [[Prisma]] Reset database
 reset:
-	$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) bunx prisma migrate reset --force --skip-seed --skip-generate --schema=$(SCHEMA)
+	$(DOCKER_COMPOSE) run --rm $(DB_CONTAINER) bunx prisma migrate reset --force --skip-seed --skip-generate --schema=$(SCHEMA)
 
 # [[Prisma]] Run Prisma seed
 seed:
-	$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) bunx prisma db seed --schema=$(SCHEMA)
+	$(DOCKER_COMPOSE) run --rm $(DB_CONTAINER) bunx prisma db seed --schema=$(SCHEMA)
 
 # [[Prisma]] Migrate for production
 production:
-	$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) bunx prisma migrate deploy
+	$(DOCKER_COMPOSE) run --rm $(DB_CONTAINER) bunx prisma migrate deploy
 
 # [[Redis]] clear all
 redis-clear:
@@ -66,7 +65,7 @@ redis-ping:
 	@echo "Pinging Redis to check connection..."
 	$(DOCKER_COMPOSE) exec $(REDIS_CONTAINER) redis-cli PING
 
-#[[Redis]] list all keys
+# [[Redis]] list all keys
 redis-keys:
 	@echo "Fetching all Redis keys..."
 	$(DOCKER_COMPOSE) exec $(REDIS_CONTAINER) redis-cli KEYS '*'
@@ -77,7 +76,7 @@ up:
 
 # [[Docker]] Build and start services
 build:
-	$(DOCKER_COMPOSE) up build
+	$(DOCKER_COMPOSE) up --build
 
 # [[Docker]] Start services in detached mode
 detach:
@@ -93,11 +92,11 @@ rebuild:
 
 # [[Docker]] Install dependencies in the container
 install:
-	$(DOCKER_COMPOSE) exec $(CONTAINER_NAME) bun install
+	$(DOCKER_COMPOSE) exec $(DB_CONTAINER) bun install
 
 # [[Docker]] View container logs
 logs:
-	$(DOCKER_COMPOSE) logs -f $(CONTAINER_NAME)
+	$(DOCKER_COMPOSE) logs -f $(DB_CONTAINER)
 
 # [[Docker]] Restart services
 restart:
@@ -105,7 +104,7 @@ restart:
 
 # [[Docker]] Execute a shell in the container
 exec:
-	$(DOCKER_COMPOSE) exec $(CONTAINER_NAME) sh
+	$(DOCKER_COMPOSE) exec $(DB_CONTAINER) sh
 
 # [[Docker]] Remove orphaned containers
 remove-orphans:
@@ -113,16 +112,15 @@ remove-orphans:
 
 # [[Docker]] Remove all resources for current app
 flush:
-	@echo "Cleaning up the next-app container and its resources..."
+	@echo "Cleaning up the resources..."
 	$(DOCKER_COMPOSE) down --volumes --remove-orphans
 	@docker system prune -f --volumes
-	@echo "Cleanup completed for next-app."
+	@echo "Cleanup completed."
 
 # [[Docker]] Check container status
 status:
-	@docker ps | grep $(CONTAINER_NAME) || echo "Container $(CONTAINER_NAME) is not running."
+	@docker ps | grep $(DB_CONTAINER) || echo "Container $(DB_CONTAINER) is not running."
 
 # [[Docker]] Show container size
 size:
-	@docker ps --size | grep $(CONTAINER_NAME) || echo "Container is not running."
-
+	@docker ps --size | grep $(DB_CONTAINER) || echo "Container is not running."
