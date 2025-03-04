@@ -7,7 +7,7 @@
         "@eslint/compat": "^1.2.7",
         "@heroui/react": "^2.7.2",
         "@heroui/theme": "^2.4.9",
-        "@hookform/resolvers": "^4.1.2",
+        "@hookform/resolvers": "^4.1.3",
         "@prisma/client": "^6.4.1",
         "@radix-ui/react-slot": "^1.1.2",
         "autoprefixer": "^10.4.20",
@@ -331,7 +331,7 @@
 
     "@heroui/user": ["@heroui/user@2.2.11", "", { "dependencies": { "@heroui/avatar": "2.2.11", "@heroui/react-utils": "2.1.8", "@heroui/shared-utils": "2.1.7", "@react-aria/focus": "3.19.1", "@react-aria/utils": "3.27.0" }, "peerDependencies": { "@heroui/system": ">=2.4.7", "@heroui/theme": ">=2.4.6", "react": ">=18 || >=19.0.0-rc.0", "react-dom": ">=18 || >=19.0.0-rc.0" } }, "sha512-1ZpVIr7yjdJEeFPWtvHmx0Q8WJSkKYnUd5iz0m9z8pTrrQtnfWavdwsGJ5Xw68Sjsr/ig5SEjro5Yn6l4COn8A=="],
 
-    "@hookform/resolvers": ["@hookform/resolvers@4.1.2", "", { "dependencies": { "@standard-schema/utils": "^0.3.0" }, "peerDependencies": { "react-hook-form": "^7.0.0" } }, "sha512-wl6H9c9wLOZMJAqGLEVKzbCkxJuV+BYuLFZFCQtCwMe0b3qQk4kUBd/ZAj13SwcSqcx86rCgSCyngQfmA6DOWg=="],
+    "@hookform/resolvers": ["@hookform/resolvers@4.1.3", "", { "dependencies": { "@standard-schema/utils": "^0.3.0" }, "peerDependencies": { "react-hook-form": "^7.0.0" } }, "sha512-Jsv6UOWYTrEFJ/01ZrnwVXs7KDvP8XIo115i++5PWvNkNvkrsTfGiLS6w+eJ57CYtUtDQalUWovCZDHFJ8u1VQ=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.1", "", {}, "sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA=="],
 

@@ -4,7 +4,7 @@ import LevelService from '@/services/level.service';
 import BaseServerAction from './base.action';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
-import { levelSchema } from '@/types/level';
+import { levelSchema } from '@/schemas/level';
 
 class LevelServerAction extends BaseServerAction<z.infer<typeof levelSchema>> {
   constructor() {
