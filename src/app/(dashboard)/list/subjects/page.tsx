@@ -1,7 +1,7 @@
-import FormModal from '@/components/FormModal';
-import Pagination from '@/components/Pagination';
-import Table from '@/components/Table';
-import TableSearch from '@/components/TableSearch';
+import FormModal from '@/components-old/FormModal';
+import Pagination from '@/components-old/Pagination';
+import Table from '@/components-old/Table';
+import TableSearch from '@/components-old/TableSearch';
 import { role, subjectsData } from '@/lib/data';
 import Image from 'next/image';
 
@@ -39,16 +39,8 @@ const SubjectListPage = () => {
         <div className="flex items-center gap-2">
           {role === 'admin' && (
             <>
-              <FormModal
-                table="subject"
-                type="update"
-                data={item}
-              />
-              <FormModal
-                table="subject"
-                type="delete"
-                id={item.id}
-              />
+              <FormModal table="subject" type="update" data={item} />
+              <FormModal table="subject" type="delete" id={item.id} />
             </>
           )}
         </div>
@@ -65,36 +57,17 @@ const SubjectListPage = () => {
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image
-                src="/filter.png"
-                alt=""
-                width={14}
-                height={14}
-              />
+              <Image src="/filter.png" alt="" width={14} height={14} />
             </button>
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image
-                src="/sort.png"
-                alt=""
-                width={14}
-                height={14}
-              />
+              <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {role === 'admin' && (
-              <FormModal
-                table="teacher"
-                type="create"
-              />
-            )}
+            {role === 'admin' && <FormModal table="teacher" type="create" />}
           </div>
         </div>
       </div>
       {/* LIST */}
-      <Table
-        columns={columns}
-        renderRow={renderRow}
-        data={subjectsData}
-      />
+      <Table columns={columns} renderRow={renderRow} data={subjectsData} />
       {/* PAGINATION */}
       <Pagination />
     </div>

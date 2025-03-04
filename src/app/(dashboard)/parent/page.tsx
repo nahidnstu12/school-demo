@@ -1,5 +1,5 @@
-import Announcements from '@/components/Announcements';
-import BigCalendar from '@/components/BigCalender';
+import Announcements from '@/components-old/Announcements';
+import BigCalendar from '@/components-old/BigCalender';
 
 const ParentPage = () => {
   return (

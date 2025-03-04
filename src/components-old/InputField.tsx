@@ -1,3 +1,4 @@
+import React from 'react';
 import type { FieldError } from 'react-hook-form';
 
 type InputFieldProps = {
@@ -29,9 +30,7 @@ const InputField = ({
         {...inputProps}
         defaultValue={defaultValue}
       />
-      {error?.message && (
-        <p className="text-xs text-red-400">{error.message.toString()}</p>
-      )}
+      {error?.message && <p className="text-xs text-red-400">{error.message.toString()}</p>}
     </div>
   );
 };

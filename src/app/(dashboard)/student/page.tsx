@@ -1,6 +1,6 @@
-import Announcements from '@/components/Announcements';
-import BigCalendar from '@/components/BigCalender';
-import EventCalendar from '@/components/EventCalendar';
+import Announcements from '@/components-old/Announcements';
+import BigCalendar from '@/components-old/BigCalender';
+import EventCalendar from '@/components-old/EventCalendar';
 
 const StudentPage = () => {
   return (

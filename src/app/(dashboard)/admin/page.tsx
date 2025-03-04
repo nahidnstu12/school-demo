@@ -1,9 +1,9 @@
-import Announcements from '@/components/Announcements';
-import AttendanceChart from '@/components/AttendanceChart';
-import CountChart from '@/components/CountChart';
-import EventCalendar from '@/components/EventCalendar';
-import FinanceChart from '@/components/FinanceChart';
-import UserCard from '@/components/UserCard';
+import Announcements from '@/components-old/Announcements';
+import AttendanceChart from '@/components-old/AttendanceChart';
+import CountChart from '@/components-old/CountChart';
+import EventCalendar from '@/components-old/EventCalendar';
+import FinanceChart from '@/components-old/FinanceChart';
+import UserCard from '@/components-old/UserCard';
 
 const AdminPage = () => {
   return (
