@@ -1,9 +1,13 @@
 'use server';
-import { Prisma } from '@prisma/client';
+
+import { Prisma, User, UserRole } from '@prisma/client';
 import BaseService from './base.service';
 import { prisma } from '@/lib/prisma';
 import UserDTO from '@/dto/user.dto';
 
+/**
+ * User service that extends the base service
+ */
 class UserService extends BaseService<
   typeof prisma.user,
   Prisma.UserCreateInput,
@@ -15,12 +19,20 @@ class UserService extends BaseService<
   }
 
   /**
-   *
-   *  method name was 'findAll' but renamed to 'testCase'
-   * @param [filters]
+   * Custom method example - find users by role
    */
-  async testCase(filters?: Prisma.Args<typeof prisma.user, 'findMany'>) {
-    return super.findAll(filters, 'toList'); // Default transform method
+  async findByRole(role: UserRole) {
+    const users = await this.model.findMany({
+      where: { role },
+    });
+    return this.transformData(users, 'toList');
+  }
+
+  /**
+   * Renamed findAll to testCase
+   */
+  async testCase(filters?: Prisma.UserFindManyArgs) {
+    return this.findAll(filters, 'toList');
   }
 }
 

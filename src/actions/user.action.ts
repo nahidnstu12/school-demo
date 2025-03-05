@@ -2,34 +2,76 @@
 
 import UserService from '@/services/user.service';
 import BaseServerAction from './base.action';
-import { userSchema } from '@/types/user';
-import { Prisma } from '@prisma/client';
+import { userSchema } from '@/schemas/userSchema';
+import { Prisma, User, UserRole } from '@prisma/client';
 import { z } from 'zod';
 
-class UserServerAction extends BaseServerAction<z.infer<typeof userSchema>> {
+/**
+ * Server actions for User entity
+ */
+class UserServerAction extends BaseServerAction<
+  z.infer<typeof userSchema>,
+  Prisma.UserCreateInput,
+  Prisma.UserUpdateInput,
+  User,
+  UserService
+> {
   constructor() {
-    super(userSchema);
+    // Create a new UserService instance and pass it to the base class
+    super(userSchema, new UserService());
   }
 
-  async createUser(
-    formData: FormData
+  // You can add user-specific methods here if needed
+  async createWithRole(
+    formData: FormData,
+    defaultRole: UserRole
   ): Promise<
-    | { success: true; user: any }
+    | { success: true; data: User }
     | { success: false; errors: { field: string | number; message: string }[] }
   > {
-    console.log(formData, 'server action form data');
     const validatedData = this.validateFormData(formData);
 
     if (!validatedData.success) return validatedData;
 
-    const user = await new UserService().create(validatedData.data as Prisma.UserCreateInput);
-    return { success: true, user };
+    // Add a default role if not provided
+    if (!validatedData.data.role) {
+      validatedData.data.role = defaultRole;
+    }
+
+    try {
+      const result = await this.service.create(validatedData.data as Prisma.UserCreateInput);
+      return { success: true, data: result };
+    } catch (error) {
+      return this.handleServiceError(error);
+    }
   }
 }
+
+// Create a single instance
 const userActionInstance = new UserServerAction();
 
+// Export standard CRUD functions
 export async function createUser(formData: FormData) {
-  return userActionInstance.createUser(formData);
+  return userActionInstance.create(formData);
 }
 
-// export default userActionInstance;
+export async function updateUser(id: string | number, formData: FormData) {
+  return userActionInstance.update(id, formData);
+}
+
+export async function deleteUser(id: string | number) {
+  return userActionInstance.delete(id);
+}
+
+export async function getUserById(id: string | number) {
+  return userActionInstance.getById(id);
+}
+
+export async function getAllUsers(filters?: Prisma.UserFindManyArgs) {
+  return userActionInstance.getAll(filters);
+}
+
+// Export custom functions
+export async function createUserWithRole(formData: FormData, defaultRole: UserRole) {
+  return userActionInstance.createWithRole(formData, defaultRole);
+}

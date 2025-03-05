@@ -1,9 +1,7 @@
 'use client';
 
-import React from 'react';
 import { Checkbox } from '@heroui/checkbox';
-import { useFormContext, Controller } from 'react-hook-form';
-import { FormErrorMessage } from './FormErrorMessage';
+import { Controller, useFormContext } from 'react-hook-form';
 
 type FormCheckboxProps = {
   name: string;
@@ -35,8 +33,8 @@ export const FormCheckbox = ({ name, label, description, required = false }: For
           </Checkbox>
         )}
       />
-      {description && <p className="text-sm text-gray-500">{description}</p>}
-      <FormErrorMessage errorMessage={errorMessage} />
+      {/* {description && <p className="text-sm text-gray-500">{description}</p>}
+      <FormErrorMessage errorMessage={errorMessage} /> */}
     </div>
   );
 };

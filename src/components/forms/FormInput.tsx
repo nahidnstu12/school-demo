@@ -1,9 +1,7 @@
 'use client';
 
-import React from 'react';
 import { Input } from '@heroui/input';
-import { useFormContext, Controller } from 'react-hook-form';
-import { FormErrorMessage } from './FormErrorMessage';
+import { Controller, useFormContext } from 'react-hook-form';
 
 type FormInputProps = {
   name: string;
@@ -50,7 +48,7 @@ export const FormInput = ({
               description={description}
             />
             {/* Display error even if component doesn't handle it */}
-            {errorMessage && <FormErrorMessage errorMessage={errorMessage} />}
+            {/* {errorMessage && <FormErrorMessage errorMessage={errorMessage} />} */}
           </>
         )}
       />
