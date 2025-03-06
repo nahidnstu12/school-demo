@@ -1,6 +1,7 @@
 'use client';
 
 import { Select, SelectItem } from '@heroui/select';
+import { useEffect } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 
 type Option = {
@@ -27,10 +28,18 @@ export const FormSelect = ({
 }: FormSelectProps) => {
   const {
     control,
+    setValue,
+    watch,
     formState: { errors },
   } = useFormContext();
   const errorMessage = errors[name]?.message?.toString();
   if (errorMessage) console.log({ name, errorMessage });
+
+  // const formValue = watch(name);
+
+  // useEffect(() => {
+  //   if (!formValue) setValue(name, '');
+  // }, [formValue, setValue, name]);
 
   return (
     <div className="w-full space-y-1">
@@ -52,8 +61,10 @@ export const FormSelect = ({
             isRequired={required}
             label={label}
             description={description}
+            selectedKeys={field.value ? [field.value] : []} // ✅ Ensure reset works
+            onSelectionChange={(keys) => field.onChange([...keys][0])} // Convert to string
           >
-            {(option) => <SelectItem>{option.label}</SelectItem>}
+            {(option) => <SelectItem key={option.key}>{option.label}</SelectItem>}
           </Select>
         )}
       />

@@ -25,6 +25,7 @@ export const FormInput = ({
     formState: { errors },
   } = useFormContext();
   const errorMessage = errors[name]?.message?.toString();
+  if (errorMessage) console.log({ name, errorMessage });
 
   return (
     <div className="w-full space-y-1">

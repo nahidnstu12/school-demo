@@ -2,7 +2,7 @@
 
 import UserService from '@/services/user.service';
 import BaseServerAction from './base.action';
-import { userSchema } from '@/schemas/userSchema';
+import { userSchema } from '@/schemas/user';
 import { Prisma, User, UserRole } from '@prisma/client';
 import { z } from 'zod';
 

@@ -2,7 +2,7 @@
 import { Prisma } from '@prisma/client';
 import BaseService from './base.service';
 import { prisma } from '@/lib/prisma';
-import LevelDTO from '@/dto/level.dto';
+import LevelDTO from '@/dtos/level.dto';
 
 class LevelService extends BaseService<
   typeof prisma.level,

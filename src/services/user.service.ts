@@ -3,7 +3,7 @@
 import { Prisma, User, UserRole } from '@prisma/client';
 import BaseService from './base.service';
 import { prisma } from '@/lib/prisma';
-import UserDTO from '@/dto/user.dto';
+import UserDTO from '@/dtos/user.dto';
 
 /**
  * User service that extends the base service

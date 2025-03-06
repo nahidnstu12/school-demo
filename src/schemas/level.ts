@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const levelSchema = z.object({
-  name: z.string(),
-  institutionId: z.string(),
+  name: z.string({ message: 'Level Name Required' }),
+  institutionId: z.string({ message: 'Select any institutions' }),
 });
 
 export type LevelSchemaType = z.infer<typeof levelSchema>;
