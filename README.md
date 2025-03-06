@@ -1,16 +1,22 @@
 # Software Requirements Specification (School Demo Project)
+
 ## Authentication and Authorization System
 
 ### 1. Introduction
+
 #### 1.1 Purpose
+
 This document outlines the software requirements for developing a role-based authentication and authorization system using Next.js 15, NextAuth, Prisma, PostgreSQL, and shadcn UI.
 More Info [Notion Docs](https://www.notion.so/nahid-me/demo-school-notes-16bca934b374801f964bc9021ebc6a27)
 
 #### 1.2 Project Scope
+
 The system will implement a hierarchical role-based access control system with four user types: SuperAdmin, Institution, Teacher, and Student. The primary focus is on implementing secure authentication and granular authorization mechanisms.
 
 ### 2. System Overview
+
 #### 2.1 System Architecture
+
 - Next.js 15 for the frontend and API routes
 - NextAuth for authentication
 - Prisma as the ORM
@@ -18,6 +24,7 @@ The system will implement a hierarchical role-based access control system with f
 - shadcn UI for the component library
 
 #### 2.2 User Roles and Hierarchy
+
 1. SuperAdmin
    - Highest level of access
    - Manages institutions and global settings
@@ -33,13 +40,16 @@ The system will implement a hierarchical role-based access control system with f
 ### 3. Functional Requirements
 
 #### 3.1 Authentication
+
 1. User Registration
+
    - Secure registration process for all user types
    - Email verification system
    - Password strength requirements
    - Prevention of duplicate accounts
 
 2. User Login
+
    - Email and password authentication
    - Session management
    - Remember me functionality
@@ -54,6 +64,7 @@ The system will implement a hierarchical role-based access control system with f
 #### 3.2 Authorization & Access Control
 
 1. SuperAdmin Capabilities
+
    - Create, read, update, delete institutions
    - Manage institution presets
    - View and manage all users
@@ -61,6 +72,7 @@ The system will implement a hierarchical role-based access control system with f
    - Configure global settings
 
 2. Institution Capabilities
+
    - Create, read, update, delete own teachers
    - Create, read, update, delete own students
    - Assign teachers to presets
@@ -68,6 +80,7 @@ The system will implement a hierarchical role-based access control system with f
    - View institution-specific analytics
 
 3. Teacher Capabilities
+
    - View assigned presets
    - Create notices for assigned presets
    - View and interact with assigned students
@@ -81,6 +94,7 @@ The system will implement a hierarchical role-based access control system with f
 #### 3.3 Notice Management
 
 1. Global Notices
+
    - Creation by Institution users
    - Viewable by all users within the institution
 
@@ -92,7 +106,9 @@ The system will implement a hierarchical role-based access control system with f
 ### 4. Non-Functional Requirements
 
 #### 4.1 Security
+
 1. Authentication Security
+
    - Password hashing using bcrypt
    - JWT token management
    - CSRF protection
@@ -105,24 +121,28 @@ The system will implement a hierarchical role-based access control system with f
    - XSS protection
 
 #### 4.2 Performance
+
 - Page load time < 2 seconds
 - API response time < 500ms
 - Support for concurrent users
 - Efficient database queries
 
 #### 4.3 Scalability
+
 - Horizontal scaling capability
 - Database optimization
 - Caching implementation
 - Resource optimization
 
 #### 4.4 Usability
+
 - Responsive design
 - Intuitive navigation
 - Consistent UI/UX
 - Accessibility compliance
 
 ### 7. Technical Stack
+
 - Frontend: Next.js 15
 - Authentication: NextAuth.js
 - Database: PostgreSQL
