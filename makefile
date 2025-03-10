@@ -13,6 +13,15 @@ SCHEMA = prisma/schema.mysql.prisma
 # Targets
 .PHONY: grant-all migrate push reset production grant-permissions super
 
+# [[general]] run docker compose & nextjs local server
+start:
+	@echo "Starting Docker services..."
+	$(DOCKER_COMPOSE) up -d
+	@echo "Waiting for database to be ready..."
+	sleep 5
+	@echo "Starting Next.js development server..."
+	bun --bun run dev
+
 # [[General]] Set permissions for Prisma files
 super:
 	sudo chmod -R 777 . && sudo chmod -R 777 ./prisma
