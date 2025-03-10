@@ -15,9 +15,9 @@ interface PrismaDelegate<T> {
 }
 
 abstract class BaseModel<T> implements IModel<T> {
-  protected model: PrismaDelegate<T>;
+  protected model: any;
 
-  constructor(model: PrismaDelegate<T>) {
+  constructor(model: any) {
     this.model = model;
   }
 

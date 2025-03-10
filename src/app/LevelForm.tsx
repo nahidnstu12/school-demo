@@ -31,6 +31,7 @@ export default function LevelForm({ institutions }: any) {
     },
   });
   const institutionOptions = mapToSelectOptions(institutions?.data, 'id', 'name');
+  // console.log("institutionOptions>", institutionOptions);
 
   return (
     <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
