@@ -1,6 +1,8 @@
 'use server';
 
+import { IService } from '@/services/IService';
 import { z, ZodType } from 'zod';
+import { IServerAction } from './IServerAction';
 
 /**
  * Base class for server actions with generic CRUD functionality
@@ -10,23 +12,19 @@ import { z, ZodType } from 'zod';
  * ModelType = Type returned by service operations
  * ServiceType = Type of the service
  */
-class BaseServerAction<
-  T,
-  CreateInput = any,
-  UpdateInput = any,
-  ModelType = any,
-  ServiceType extends {
-    create: (data: CreateInput) => Promise<ModelType>;
-    update: (id: string | number, data: UpdateInput) => Promise<ModelType>;
-    delete: (id: string | number) => Promise<ModelType>;
-    findById: (id: string | number) => Promise<ModelType | null>;
-    findAll: (filters?: any) => Promise<ModelType[]>;
-  } = any,
-> {
-  protected schema: ZodType<T>;
-  protected service: ServiceType;
 
-  constructor(schema: ZodType<T>, service: ServiceType) {
+abstract class BaseServerAction<
+  T,
+  CreateInput,
+  UpdateInput,
+  ModelType,
+  S extends IService<ModelType, CreateInput, UpdateInput>,
+> implements IServerAction<T, ModelType>
+{
+  protected schema: ZodType<T>;
+  protected service: S;
+
+  constructor(schema: ZodType<T>, service: S) {
     this.schema = schema;
     this.service = service;
   }

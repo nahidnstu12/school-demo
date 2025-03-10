@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const levelSchema = z.object({
-  name: z.string({ message: 'Level Name Required' }),
+  name: z.string({ message: 'Level Name Required' }).nonempty('Level Name Required'),
   institutionId: z.string({ message: 'Select any institutions' }),
 });
 

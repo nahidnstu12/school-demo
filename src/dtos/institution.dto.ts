@@ -1,7 +1,9 @@
 'use server';
 
+import { Institution } from '@prisma/client';
+
 class InstitutionDTO {
-  static toProfile(institution: any) {
+  static toProfile(institution: Institution) {
     return {
       id: institution.id,
       email: institution.email,
@@ -11,7 +13,7 @@ class InstitutionDTO {
     };
   }
 
-  static toList(institution: any) {
+  static toList(institution: Institution) {
     return {
       id: institution.id,
       email: institution.email,

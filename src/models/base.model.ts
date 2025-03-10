@@ -1,11 +1,23 @@
 'use server';
 
 import { Prisma } from '@prisma/client';
+import { IModel } from './IModel';
 
-class BaseModel<T> {
-  protected model: T;
+interface PrismaDelegate<T> {
+  create: (args: { data: Prisma.Args<T, 'create'>['data'] }) => Promise<T>;
+  update: (args: {
+    where: { id: string | number };
+    data: Prisma.Args<T, 'update'>['data'];
+  }) => Promise<T>;
+  delete: (args: { where: { id: string | number } }) => Promise<T>;
+  findMany: (args?: Prisma.Args<T, 'findMany'>) => Promise<T[]>;
+  findUnique: (args: { where: { id: string | number } }) => Promise<T | null>;
+}
 
-  constructor(model: T) {
+abstract class BaseModel<T> implements IModel<T> {
+  protected model: PrismaDelegate<T>;
+
+  constructor(model: PrismaDelegate<T>) {
     this.model = model;
   }
 
@@ -23,6 +35,10 @@ class BaseModel<T> {
 
   async findMany(filters: Prisma.Args<T, 'findMany'> = {} as any) {
     return await (this.model as any).findMany(filters);
+  }
+
+  async findUnique(id: string | number): Promise<T | null> {
+    return await (this.model as any).findUnique({ where: { id } });
   }
 }
 

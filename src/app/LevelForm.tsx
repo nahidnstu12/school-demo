@@ -1,19 +1,17 @@
 'use client';
 
-import { getAllInstitutions } from '@/actions/institution.action';
 import { createLevel } from '@/actions/level.action';
 import { FormContainer } from '@/components/forms/FormContainer';
 import { FormInput } from '@/components/forms/FormInput';
 import { FormSelect } from '@/components/forms/FormSelect';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
-import { InstitutionFormValues } from '@/schemas/institution';
-import { levelSchema } from '@/schemas/level';
+import { levelSchema, LevelSchemaType } from '@/schemas/level';
 import { mapToSelectOptions } from '@/utils/helpers';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
 export default function LevelForm({ institutions }: any) {
-  const methods = useForm<InstitutionFormValues>({
+  const methods = useForm<LevelSchemaType>({
     resolver: zodResolver(levelSchema),
     defaultValues: {
       name: '',

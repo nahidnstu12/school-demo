@@ -4,17 +4,20 @@ import LevelService from '@/services/level.service';
 import BaseServerAction from './base.action';
 import { Level, Prisma } from '@prisma/client';
 import { z } from 'zod';
-import { levelSchema } from '@/schemas/level';
+import { levelSchema, LevelSchemaType } from '@/schemas/level';
 
 class LevelServerAction extends BaseServerAction<
-  z.infer<typeof levelSchema>,
+  LevelSchemaType,
   Prisma.LevelCreateInput,
   Prisma.LevelUpdateInput,
   Level,
   LevelService
 > {
-  constructor() {
-    super(levelSchema, new LevelService());
+  constructor(
+    schema: z.ZodType<LevelSchemaType> = levelSchema,
+    service: LevelService = new LevelService()
+  ) {
+    super(schema, service);
   }
 }
 const LevelActionInstance = new LevelServerAction();

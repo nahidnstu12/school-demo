@@ -1,7 +1,9 @@
 'use server';
 
+import { Level } from '@prisma/client';
+
 class LevelDTO {
-  static toProfile(level: any) {
+  static toProfile(level: Level) {
     return {
       id: level.id,
       institutionId: level.institutionId,
@@ -9,7 +11,7 @@ class LevelDTO {
     };
   }
 
-  static toList(level: any) {
+  static toList(level: Level) {
     return {
       id: level.id,
       institutionId: level.institutionId,

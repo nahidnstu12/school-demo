@@ -22,10 +22,18 @@ export const FormInput = ({
 }: FormInputProps) => {
   const {
     control,
-    formState: { errors },
+    formState: { errors, isSubmitted },
   } = useFormContext();
   const errorMessage = errors[name]?.message?.toString();
   if (errorMessage) console.log({ name, errorMessage });
+
+  console.log({
+    name,
+    hasError: !!errors[name],
+    errorMessage,
+    isSubmitted,
+    allErrors: errors,
+  });
 
   return (
     <div className="w-full space-y-1">

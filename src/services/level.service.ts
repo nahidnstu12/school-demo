@@ -1,17 +1,19 @@
 'use server';
-import { Prisma } from '@prisma/client';
+import { Level, Prisma } from '@prisma/client';
 import BaseService from './base.service';
 import { prisma } from '@/lib/prisma';
 import LevelDTO from '@/dtos/level.dto';
+import LevelModel from '@/models/level.model';
 
 class LevelService extends BaseService<
-  typeof prisma.level,
+  Level,
   Prisma.LevelCreateInput,
   Prisma.LevelUpdateInput,
+  LevelModel,
   typeof LevelDTO
 > {
-  constructor() {
-    super(prisma.level, LevelDTO);
+  constructor(model: LevelModel = new LevelModel(), dto: typeof LevelDTO = LevelDTO) {
+    super(model, dto);
   }
 }
 
