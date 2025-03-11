@@ -17,8 +17,6 @@ class LevelService extends BaseService<
   }
 
   async checkNameExists(name: string, institutionId: string, levelId?: string) {
-    console.log('Checking name exists:', { name, institutionId, levelId });
-
     const existingLevels = await this.model.findMany({
       where: {
         name,
@@ -27,13 +25,12 @@ class LevelService extends BaseService<
       },
       take: 1, // Only need one result to confirm existence
     });
-    console.log('existingLevels>', existingLevels.length);
 
     return existingLevels.length > 0;
   }
 
   async create(data: Prisma.LevelCreateInput) {
-    const institutionId = (data.institution as { connect: { id: string } })?.connect?.id;
+    const institutionId = (data as any).institutionId;
     // Check for duplicate level name
     const nameExists = await this.checkNameExists(data.name, institutionId as string);
     if (nameExists) {
