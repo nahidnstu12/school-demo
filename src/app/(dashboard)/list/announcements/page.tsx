@@ -3,7 +3,6 @@ import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
-import AnnouncementCreateDrawer from '@/components/drawer/AnnouncementCreate';
 import { announcementsData, role } from '@/lib/data';
 import { Button, useDisclosure } from '@heroui/react';
 import Image from 'next/image';
@@ -80,7 +79,7 @@ const AnnouncementListPage = () => {
                 <Button color="warning" variant="flat" onPress={onOpen}>
                   create Announcement
                 </Button>
-                <AnnouncementCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+                {/* create drawer */}
               </>
             )}
           </div>

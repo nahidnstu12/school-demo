@@ -3,7 +3,6 @@ import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
-import CLassCreateDrawer from '@/components/drawer/ClassCreate';
 import { classesData, role } from '@/lib/data';
 import { Button, useDisclosure } from '@heroui/react';
 import Image from 'next/image';
@@ -86,7 +85,7 @@ function ClassListPage() {
                 <Button color="warning" variant="flat" onPress={onOpen}>
                   create Class
                 </Button>
-                <CLassCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+                {/* create drawer */}
               </>
             )}
           </div>

@@ -3,7 +3,6 @@ import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
-import EventCreateDrawer from '@/components/drawer/EventCreate';
 import { eventsData, role } from '@/lib/data';
 import { Button, useDisclosure } from '@heroui/react';
 import Image from 'next/image';
@@ -94,7 +93,7 @@ const EventListPage = () => {
                 <Button color="warning" variant="flat" onPress={onOpen}>
                   create Event
                 </Button>
-                <EventCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+                {/* create drawer */}
               </>
             )}
           </div>

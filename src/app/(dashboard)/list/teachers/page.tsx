@@ -1,13 +1,25 @@
 'use client';
+import { getAllInstitutions } from '@/actions/institution.action';
+import { createLevel } from '@/actions/level.action';
 import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
-import TeacherCreateDrawer from '@/components/drawer/TeacherCreate';
+import CreateDrawer from '@/components/drawer/createDrawer';
+import { FormContainer } from '@/components/forms/FormContainer';
+import { FormInput } from '@/components/forms/FormInput';
+import { FormSelect } from '@/components/forms/FormSelect';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { role, teachersData } from '@/lib/data';
+import { InstitutionFormValues } from '@/schemas/institution';
+import { levelSchema } from '@/schemas/level';
+import { mapToSelectOptions } from '@/utils/helpers';
 import { Button, useDisclosure } from '@heroui/react';
+import { zodResolver } from '@hookform/resolvers/zod';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 type Teacher = {
   id: number;
@@ -20,6 +32,28 @@ type Teacher = {
   classes: string[];
   address: string;
 };
+
+interface Institution {
+  address: string;
+  name: string;
+  id: string;
+  contactNumber: string;
+  email: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface SuccessResponse {
+  success: true;
+  data: Institution[];
+}
+
+interface ErrorResponse {
+  success: false;
+  errors: { field: string | number; message: string }[];
+}
+
+type InstitutionResponse = SuccessResponse | ErrorResponse;
 
 const columns = [
   {
@@ -57,8 +91,49 @@ const columns = [
   },
 ];
 
-function TeacherListPage() {
+export default function TeacherListPage() {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const methods = useForm<InstitutionFormValues>({
+    resolver: zodResolver(levelSchema),
+    defaultValues: {
+      name: '',
+      institutionId: undefined,
+    },
+    mode: 'onSubmit',
+  });
+
+  useEffect(() => {
+    async function fetchInstitutions() {
+      try {
+        const response: InstitutionResponse = await getAllInstitutions();
+
+        if (response.success) {
+          setInstitutions(response.data); // ✅ Set only the data array
+        } else {
+          console.error('Error fetching institutions:', response.errors);
+          setInstitutions([]); // Fallback to an empty array
+        }
+      } catch (error) {
+        console.error('Unexpected error:', error);
+        setInstitutions([]); // Fallback to an empty array
+      }
+    }
+
+    fetchInstitutions();
+  }, []);
+
+  // Use our custom hook for form submission
+  const { isSubmitting, rootError, successMsg, handleSubmit } = useFormSubmit({
+    formMethods: methods,
+    submitAction: createLevel,
+    successMessage: 'Level created successfully!',
+    onSuccess: (data) => {
+      console.log('Level created:', data);
+      // You could add additional logic here
+    },
+  });
+  const institutionOptions = mapToSelectOptions(institutions, 'id', 'name');
 
   const renderRow = (item: Teacher) => (
     <tr
@@ -124,7 +199,31 @@ function TeacherListPage() {
                 <Button color="warning" variant="flat" onPress={onOpen}>
                   create teacher
                 </Button>
-                <TeacherCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+                {/* create drawer */}
+                <CreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} header="Create Level">
+                  <FormContainer
+                    formMethods={methods}
+                    onSubmit={handleSubmit}
+                    isSubmitting={isSubmitting}
+                    rootError={rootError}
+                    successMessage={successMsg}
+                  >
+                    <FormInput
+                      name="name"
+                      label="Level Name"
+                      type="text"
+                      placeholder="create name"
+                      required
+                    />
+
+                    <FormSelect
+                      name="institutionId"
+                      label="Institution"
+                      options={institutionOptions}
+                      required
+                    />
+                  </FormContainer>
+                </CreateDrawer>
               </>
             )}
           </div>
@@ -137,5 +236,3 @@ function TeacherListPage() {
     </div>
   );
 }
-
-export default TeacherListPage;

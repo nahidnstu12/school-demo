@@ -3,7 +3,6 @@ import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
-import SubjectCreateDrawer from '@/components/drawer/SubjectCreate';
 import { role, subjectsData } from '@/lib/data';
 import { Button, useDisclosure } from '@heroui/react';
 import Image from 'next/image';
@@ -72,7 +71,7 @@ function SubjectListPage() {
                 <Button color="warning" variant="flat" onPress={onOpen}>
                   create Subject
                 </Button>
-                <SubjectCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+                {/* create drawer */}
               </>
             )}
           </div>

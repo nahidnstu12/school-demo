@@ -3,7 +3,6 @@ import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
-import StudentCreateDrawer from '@/components/drawer/StudentCreate';
 import { role, studentsData } from '@/lib/data';
 import { Button, useDisclosure } from '@heroui/react';
 import Image from 'next/image';
@@ -118,7 +117,7 @@ function StudentListPage() {
                 <Button color="warning" variant="flat" onPress={onOpen}>
                   create student
                 </Button>
-                <StudentCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+                {/* create drawer */}
               </>
             )}
           </div>

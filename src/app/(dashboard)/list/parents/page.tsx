@@ -3,7 +3,6 @@ import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
-import ParentCreateDrawer from '@/components/drawer/ParentCreate';
 import { parentsData, role } from '@/lib/data';
 import { Button, useDisclosure } from '@heroui/react';
 import Image from 'next/image';
@@ -92,7 +91,7 @@ function ParentListPage() {
                 <Button color="warning" variant="flat" onPress={onOpen}>
                   create parent
                 </Button>
-                <ParentCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+                {/* create drawer */}
               </>
             )}
           </div>

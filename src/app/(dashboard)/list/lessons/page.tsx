@@ -3,7 +3,6 @@ import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
-import LessonCreateDrawer from '@/components/drawer/LessonCreate';
 import { lessonsData, role } from '@/lib/data';
 import { Button, useDisclosure } from '@heroui/react';
 import Image from 'next/image';
@@ -80,7 +79,7 @@ const LessonListPage = () => {
                 <Button color="warning" variant="flat" onPress={onOpen}>
                   create Lesson
                 </Button>
-                <LessonCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+                {/* create drawer */}
               </>
             )}
           </div>
