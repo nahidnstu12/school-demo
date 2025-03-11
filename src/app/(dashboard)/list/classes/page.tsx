@@ -1,8 +1,11 @@
+'use client';
 import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
+import CLassCreateDrawer from '@/components/drawer/ClassCreate';
 import { classesData, role } from '@/lib/data';
+import { Button, useDisclosure } from '@heroui/react';
 import Image from 'next/image';
 
 type Class = {
@@ -39,7 +42,8 @@ const columns = [
   },
 ];
 
-const ClassListPage = () => {
+function ClassListPage() {
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const renderRow = (item: Class) => (
     <tr
       key={item.id}
@@ -76,7 +80,15 @@ const ClassListPage = () => {
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {role === 'admin' && <FormModal table="class" type="create" />}
+            {/* {role === 'admin' && <FormModal table="class" type="create" />} */}
+            {role === 'admin' && (
+              <>
+                <Button color="warning" variant="flat" onPress={onOpen}>
+                  create Class
+                </Button>
+                <CLassCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -86,6 +98,6 @@ const ClassListPage = () => {
       <Pagination />
     </div>
   );
-};
+}
 
 export default ClassListPage;

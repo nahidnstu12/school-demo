@@ -1,8 +1,11 @@
+'use client';
 import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
+import TeacherCreateDrawer from '@/components/drawer/TeacherCreate';
 import { role, teachersData } from '@/lib/data';
+import { Button, useDisclosure } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -54,7 +57,9 @@ const columns = [
   },
 ];
 
-const TeacherListPage = () => {
+function TeacherListPage() {
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+
   const renderRow = (item: Teacher) => (
     <tr
       key={item.id}
@@ -114,7 +119,13 @@ const TeacherListPage = () => {
               // <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               //   <Image src="/plus.png" alt="" width={14} height={14} />
               // </button>
-              <FormModal table="teacher" type="create" />
+              // <FormModal table="teacher" type="create" />
+              <>
+                <Button color="warning" variant="flat" onPress={onOpen}>
+                  create teacher
+                </Button>
+                <TeacherCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+              </>
             )}
           </div>
         </div>
@@ -125,6 +136,6 @@ const TeacherListPage = () => {
       <Pagination />
     </div>
   );
-};
+}
 
 export default TeacherListPage;

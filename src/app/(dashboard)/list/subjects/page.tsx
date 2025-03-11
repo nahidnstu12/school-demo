@@ -1,8 +1,11 @@
+'use client';
 import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
+import SubjectCreateDrawer from '@/components/drawer/SubjectCreate';
 import { role, subjectsData } from '@/lib/data';
+import { Button, useDisclosure } from '@heroui/react';
 import Image from 'next/image';
 
 type Subject = {
@@ -27,7 +30,8 @@ const columns = [
   },
 ];
 
-const SubjectListPage = () => {
+function SubjectListPage() {
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const renderRow = (item: Subject) => (
     <tr
       key={item.id}
@@ -62,7 +66,15 @@ const SubjectListPage = () => {
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {role === 'admin' && <FormModal table="teacher" type="create" />}
+            {/* {role === 'admin' && <FormModal table="teacher" type="create" />} */}
+            {role === 'admin' && (
+              <>
+                <Button color="warning" variant="flat" onPress={onOpen}>
+                  create Subject
+                </Button>
+                <SubjectCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -72,6 +84,6 @@ const SubjectListPage = () => {
       <Pagination />
     </div>
   );
-};
+}
 
 export default SubjectListPage;

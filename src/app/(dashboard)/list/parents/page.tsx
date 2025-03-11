@@ -1,8 +1,11 @@
+'use client';
 import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
+import ParentCreateDrawer from '@/components/drawer/ParentCreate';
 import { parentsData, role } from '@/lib/data';
+import { Button, useDisclosure } from '@heroui/react';
 import Image from 'next/image';
 
 type Parent = {
@@ -40,7 +43,8 @@ const columns = [
   },
 ];
 
-const ParentListPage = () => {
+function ParentListPage() {
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const renderRow = (item: Parent) => (
     <tr
       key={item.id}
@@ -82,7 +86,15 @@ const ParentListPage = () => {
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {role === 'admin' && <FormModal table="teacher" type="create" />}
+            {/* {role === 'admin' && <FormModal table="teacher" type="create" />} */}
+            {role === 'admin' && (
+              <>
+                <Button color="warning" variant="flat" onPress={onOpen}>
+                  create parent
+                </Button>
+                <ParentCreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} />
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -92,6 +104,6 @@ const ParentListPage = () => {
       <Pagination />
     </div>
   );
-};
+}
 
 export default ParentListPage;
