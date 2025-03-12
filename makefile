@@ -18,7 +18,7 @@ start:
 	@echo "Starting Docker services..."
 	$(DOCKER_COMPOSE) up -d
 	@echo "Waiting for database to be ready..."
-	sleep 5
+	sleep 2
 	@echo "Starting Next.js development server..."
 	bun --bun run dev
 

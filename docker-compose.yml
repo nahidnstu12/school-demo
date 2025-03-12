@@ -1,7 +1,7 @@
 services:
-  mysql:
+  mysql-school-demo:
     image: mysql:8.0
-    container_name: mysql
+    container_name: mysql-school-demo
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -28,7 +28,7 @@ services:
       PMA_USER: ${MYSQL_USER}
       PMA_PASSWORD: ${MYSQL_PASSWORD}
     depends_on:
-      mysql:
+      mysql-school-demo:
         condition: service_healthy
         
 volumes:

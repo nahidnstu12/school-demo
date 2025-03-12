@@ -1,10 +1,9 @@
-'use client';
 import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
 import { role, subjectsData } from '@/lib/data';
-import { Button, useDisclosure } from '@heroui/react';
+import { Button } from '@heroui/react';
 import Image from 'next/image';
 
 type Subject = {
@@ -29,8 +28,8 @@ const columns = [
   },
 ];
 
-function SubjectListPage() {
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+async function SubjectListPage() {
+  // await new Promise(() => {});
   const renderRow = (item: Subject) => (
     <tr
       key={item.id}
@@ -65,15 +64,7 @@ function SubjectListPage() {
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {/* {role === 'admin' && <FormModal table="teacher" type="create" />} */}
-            {role === 'admin' && (
-              <>
-                <Button color="warning" variant="flat" onPress={onOpen}>
-                  create Subject
-                </Button>
-                {/* create drawer */}
-              </>
-            )}
+            {role === 'admin' && <FormModal table="teacher" type="create" />}
           </div>
         </div>
       </div>

@@ -5,16 +5,17 @@ import FormModal from '@/components-old/FormModal';
 import Pagination from '@/components-old/Pagination';
 import Table from '@/components-old/Table';
 import TableSearch from '@/components-old/TableSearch';
-import CreateDrawer from '@/components/drawer/createDrawer';
+import CreateDrawer from '@/components/createDrawer';
 import { FormContainer } from '@/components/forms/FormContainer';
 import { FormInput } from '@/components/forms/FormInput';
 import { FormSelect } from '@/components/forms/FormSelect';
+import ShowModal from '@/components/ShowModal';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { role, teachersData } from '@/lib/data';
 import { InstitutionFormValues } from '@/schemas/institution';
 import { levelSchema } from '@/schemas/level';
 import { mapToSelectOptions } from '@/utils/helpers';
-import { Button, useDisclosure } from '@heroui/react';
+import { addToast, Button, modal, useDisclosure } from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -92,7 +93,8 @@ const columns = [
 ];
 
 export default function TeacherListPage() {
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const modalDisclosure = useDisclosure();
+  const drawerDisclosure = useDisclosure();
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const methods = useForm<InstitutionFormValues>({
     resolver: zodResolver(levelSchema),
@@ -102,6 +104,15 @@ export default function TeacherListPage() {
     },
     mode: 'onSubmit',
   });
+
+  const handleDelete = () => {
+    addToast({
+      title: 'Toast title',
+      description: 'Toast displayed successfully',
+      color: 'success',
+    });
+    modalDisclosure.onOpenChange();
+  };
 
   useEffect(() => {
     async function fetchInstitutions() {
@@ -166,10 +177,16 @@ export default function TeacherListPage() {
             </button>
           </Link>
           {role === 'admin' && (
-            // <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaPurple">
-            //   <Image src="/delete.png" alt="" width={16} height={16} />
-            // </button>
-            <FormModal table="teacher" type="delete" id={item.id} />
+            <>
+              <Button onPress={modalDisclosure.onOpen}>Delete</Button>
+              <ShowModal
+                isOpen={modalDisclosure.isOpen}
+                onOpenChange={modalDisclosure.onOpenChange}
+                header="Delete Teacher"
+                message="Are you sure you want to delete the Teacher?"
+                onPress={handleDelete}
+              />
+            </>
           )}
         </div>
       </td>
@@ -191,16 +208,16 @@ export default function TeacherListPage() {
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
             {role === 'admin' && (
-              // <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              //   <Image src="/plus.png" alt="" width={14} height={14} />
-              // </button>
-              // <FormModal table="teacher" type="create" />
               <>
-                <Button color="warning" variant="flat" onPress={onOpen}>
+                <Button color="warning" variant="flat" onPress={drawerDisclosure.onOpen}>
                   create teacher
                 </Button>
                 {/* create drawer */}
-                <CreateDrawer isOpen={isOpen} onOpenChange={onOpenChange} header="Create Level">
+                <CreateDrawer
+                  isOpen={drawerDisclosure.isOpen}
+                  onOpenChange={drawerDisclosure.onOpenChange}
+                  header="Create Level"
+                >
                   <FormContainer
                     formMethods={methods}
                     onSubmit={handleSubmit}
