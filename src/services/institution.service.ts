@@ -21,6 +21,10 @@ class InstitutionService extends BaseService<
   ) {
     super(model, dto);
   }
+
+  // async softDelete(id: number | string): Promise<Institution> {
+  //   return await this.model.update(id, { deleted: true } as any);
+  // }
 }
 
 export default InstitutionService;

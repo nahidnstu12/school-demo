@@ -20,6 +20,14 @@ class InstitutionDTO {
       name: institution.name,
     };
   }
+
+  static toPublic(institution: Institution) {
+    // A public view that excludes sensitive info
+    return {
+      id: institution.id,
+      name: institution.name,
+    };
+  }
 }
 
 export default InstitutionDTO;
