@@ -10,6 +10,7 @@ type FormInputProps = {
   placeholder?: string;
   description?: string;
   required?: boolean;
+  value?: string;
 };
 
 export const FormInput = ({
@@ -19,6 +20,7 @@ export const FormInput = ({
   placeholder,
   description,
   required = false,
+  value,
 }: FormInputProps) => {
   const {
     control,
@@ -47,6 +49,7 @@ export const FormInput = ({
               isInvalid={!!errorMessage}
               errorMessage={errorMessage}
               description={description}
+              value={value ? value : ''}
             />
             {/* Display error even if component doesn't handle it */}
             {/* {errorMessage && <FormErrorMessage errorMessage={errorMessage} />} */}

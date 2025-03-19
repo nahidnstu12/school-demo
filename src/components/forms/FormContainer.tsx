@@ -5,7 +5,7 @@ import { FormActions } from './FormActions';
 
 type FormContainerProps<T extends Record<string, any>> = {
   formMethods: UseFormReturn<T>;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit?: (e: React.FormEvent<HTMLFormElement>) => void;
   children: ReactNode;
   isSubmitting?: boolean;
   rootError?: string | null;

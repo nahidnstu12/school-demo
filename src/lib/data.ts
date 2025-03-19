@@ -386,14 +386,14 @@ export const subjectsData = [
 
 export const classesData = [
   {
-    id: 1,
+    id: 'cm84soiob0003whetc8x9g4hk',
     name: '1A',
     capacity: 20,
     grade: 1,
     supervisor: 'Joseph Padilla',
   },
   {
-    id: 2,
+    id: 'cm87w1xm00001whayxx28lj95',
     name: '2B',
     capacity: 22,
     grade: 2,

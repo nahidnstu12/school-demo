@@ -95,6 +95,7 @@ const columns = [
 export default function TeacherListPage() {
   const modalDisclosure = useDisclosure();
   const drawerDisclosure = useDisclosure();
+
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const methods = useForm<InstitutionFormValues>({
     resolver: zodResolver(levelSchema),
