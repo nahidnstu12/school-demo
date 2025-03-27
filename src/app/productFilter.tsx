@@ -210,6 +210,8 @@ export default function ProductList() {
       try {
         // Fetch categories
         const categoriesResult = await getProductCategories();
+        console.log(categoriesResult);
+
         if (categoriesResult.success) {
           setCategories(categoriesResult.data);
         }

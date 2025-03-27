@@ -196,7 +196,7 @@ class ProductModel extends BaseModel<Product> {
    */
   async getDistinctCategories(): Promise<string[]> {
     const categoriesData = await this.prismaClient.$queryRaw<{ category: string }[]>`
-      SELECT DISTINCT category FROM "products"
+      SELECT DISTINCT category FROM products
       WHERE deleted = false
       ORDER BY category ASC
     `;

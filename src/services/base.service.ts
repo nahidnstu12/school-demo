@@ -59,6 +59,8 @@ abstract class BaseService<T, CreateInput, UpdateInput, M extends IModel<T>, DTO
     // Fetch data with pagination
     const data = await this.model.findMany(paginatedFilters);
 
+    console.log('base service>', data.length);
+
     // Get total count for pagination metadata
     const total = await this.model.count(filters);
 

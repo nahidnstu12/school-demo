@@ -175,6 +175,7 @@ class ProductServerAction extends BaseServerAction<
         // Get filter object
         filterObject = filterBuilder.build();
       }
+      // console.log({  filterObject: filterObject.where.name });
 
       // Get data with pagination
       const results = await this.service.findAllPaginated(page, pageSize, filterObject);
@@ -191,6 +192,7 @@ class ProductServerAction extends BaseServerAction<
   async getProductCategories(): Promise<ActionResult<string[]>> {
     try {
       const categories = await this.service.getDistinctCategories();
+
       return { success: true, data: categories };
     } catch (error) {
       return this.handleServiceError(error);
