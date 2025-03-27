@@ -1,6 +1,7 @@
 import { PrismaClient, UserRole, NoticeType } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { mockproducts } from './fakerData';
 
 const prisma = new PrismaClient();
 
@@ -60,6 +61,8 @@ async function main() {
           filename: `image${index + 1}.jpg`,
           mimetype: 'image/jpeg',
           size: Math.floor(Math.random() * 1000000) + 100000,
+          ownerId: "",
+          ownerType: "Product"
         },
       });
     })
@@ -538,6 +541,86 @@ async function main() {
 
     console.log('Seeding completed for Institution:', institution.name);
   }
+
+  console.log('Creating categories...');
+  const categoriesData = [
+    { id: uuidv4(), name: 'Electronics' },
+    { id: uuidv4(), name: 'Books' },
+    { id: uuidv4(), name: 'Clothing' },
+    { id: uuidv4(), name: 'Home & Kitchen' },
+    { id: uuidv4(), name: 'Sports & Outdoors' },
+    { id: uuidv4(), name: 'Beauty & Personal Care' },
+    { id: uuidv4(), name: 'Toys & Games' },
+    { id: uuidv4(), name: 'Health & Wellness' }
+  ];
+
+  // Insert categories with predefined IDs
+  for (const category of categoriesData) {
+    await prisma.category.upsert({
+      where: { name: category.name },
+      update: {},
+      create: {
+        id: category.id,  // Explicitly set the ID
+        name: category.name
+      }
+    });
+  }
+  console.log(`Categories created: ${categoriesData.length}`);
+
+  // Create a category mapping using the predefined IDs
+  const categoryMap = categoriesData.reduce((map, category) => {
+    map[category.name] = category.id; // Now we have direct access to assigned IDs
+    return map;
+  }, {} as Record<string, string>);
+
+
+  // Create products
+  for (const product of mockproducts) {
+    const categoryId = categoryMap[product.category];
+
+    if (!categoryId) {
+      console.warn(`Category not found: ${product.category}`);
+      continue;
+    }
+
+    // Create product
+    const createdProduct = await prisma.product.upsert({
+      where: { sku: product.sku },
+      update: {},
+      create: {
+        id: uuidv4(),
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        category: product.category,
+        categoryId: categoryId,
+        stock: product.stock,
+        sku: product.sku,
+        featured: product.featured,
+        tags: product.tags,
+        deleted: false
+      }
+    });
+
+    // Create images for the product
+    if (product.images && product.images.length > 0) {
+      for (const image of product.images) {
+        await prisma.image.create({
+          data: {
+            id: uuidv4(),
+            path: `/images/products/${image.filename}`,
+            filename: image.filename,
+            mimetype: image.mimetype,
+            size: image.size,
+            ownerId: createdProduct.id,
+            ownerType: 'Product'
+          }
+        });
+      }
+    }
+  }
+
+  console.log('Products and images seeded');
 
   console.log('Seeding completed.');
 }

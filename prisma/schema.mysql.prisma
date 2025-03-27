@@ -53,14 +53,14 @@ model User {
 model Institution {
   id             String   @id @default(cuid())
   userId         String   @map("user_id")
-  uuid String @unique @map("uuid")
+  uuid           String   @unique @map("uuid")
   name           String
   registrationNo String?  @map("registration_no")
   noOfStudents   Int?     @map("no_of_students")
   noOfTeachers   Int?     @map("no_of_teachers")
   type           String   @default("PRIMARY_SCHOOL")
-  coverPhoto     String?     @map("cover_photo")
-  logo           String?     @map("logo")
+  coverPhoto     String?  @map("cover_photo")
+  logo           String?  @map("logo")
   location       String?
   contactNumber  String?
   address        String?
@@ -477,5 +477,74 @@ model Image {
   updatedAt DateTime @updatedAt @map("updated_at")
   deleted   Boolean  @default(false)
 
+  // Polymorphic Relation
+  ownerId   String
+  ownerType String // "Product", "User", "Institution"
+
+  @@index([ownerId, ownerType]) // Optimized for polymorphic queries
   @@map("images")
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  description String?   @db.Text
+  price       Decimal   @db.Decimal(10, 2)
+  category    String
+  stock       Int       @default(0)
+  sku         String    @unique
+  featured    Boolean   @default(false)
+  tags        Json
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deleted     Boolean   @default(false)
+  deletedAt   DateTime?
+
+  // Relations (examples - adjust based on your actual data model)
+  categoryId String?
+  Category   Category?   @relation(fields: [categoryId], references: [id])
+  reviews    Review[]
+  orderItems OrderItem[]
+
+  @@index([category])
+  @@index([deleted])
+  @@index([featured])
+  @@map("products")
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  content   String?  @db.Text
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([userId])
+  @@map("reviews")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  orderId   String
+  // Include your Order relation here
+
+  @@map("orderItems")
 }

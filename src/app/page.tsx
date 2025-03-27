@@ -3,6 +3,7 @@ import UserService from '@/services/user.service';
 import UserRegistrationForm from './TestForms';
 import LevelForm from './LevelForm';
 import { getAllInstitutions } from '@/actions/institution.action';
+import ProductList from './productFilter';
 
 export default async function HomePage() {
   const institutions = await getAllInstitutions();
@@ -10,7 +11,8 @@ export default async function HomePage() {
   // console.log(users);
   return (
     <>
-      <LevelForm institutions={institutions} /> <UserRegistrationForm />
+      {/* <LevelForm institutions={institutions} /> <UserRegistrationForm /> */}
+      <ProductList />
     </>
   );
 }
