@@ -91,6 +91,7 @@ class ProductServerAction extends BaseServerAction<
    */
   async getProductsWithFilter(formData: FormData): Promise<ActionResult<any>> {
     try {
+      const filterJson = formData.get('filter') as string;
       // Extract filter parameters from form data
       const search = (formData.get('search') as string) || '';
       const category = (formData.get('category') as string) || '';
@@ -115,7 +116,6 @@ class ProductServerAction extends BaseServerAction<
 
       // Check for raw filter object
       let filterObject: any = {};
-      const filterJson = formData.get('filter') as string;
 
       if (filterJson) {
         try {
@@ -131,6 +131,8 @@ class ProductServerAction extends BaseServerAction<
 
         // Add search filter
         if (search) {
+          console.log('hit');
+
           filterBuilder.or([
             { name: { contains: search, mode: 'insensitive' } },
             { description: { contains: search, mode: 'insensitive' } },
@@ -174,8 +176,8 @@ class ProductServerAction extends BaseServerAction<
 
         // Get filter object
         filterObject = filterBuilder.build();
+        console.log('filterObject>', filterObject);
       }
-      // console.log({  filterObject: filterObject.where.name });
 
       // Get data with pagination
       const results = await this.service.findAllPaginated(page, pageSize, filterObject);

@@ -41,6 +41,7 @@ abstract class BaseModel<T> implements IModel<T> {
     // Default implementation with soft delete filtering
     const defaultFilters = { where: { deleted: { not: true } } } as any;
     const mergedFilters = this.mergeFilters(defaultFilters, filters);
+
     console.log(JSON.stringify(mergedFilters, null, 2));
 
     return await (this.model as any).findMany(mergedFilters);
@@ -81,9 +82,12 @@ abstract class BaseModel<T> implements IModel<T> {
   }
 
   async count(filters: Prisma.Args<T, 'count'> = {} as any): Promise<number> {
-    // Default implementation with soft delete filtering
     const defaultFilters = { where: { deleted: { not: true } } } as any;
     const mergedFilters = this.mergeFilters(defaultFilters, filters);
+
+    if (mergedFilters.skip) delete mergedFilters.skip;
+    if (mergedFilters.take) delete mergedFilters.take;
+
     return await (this.model as any).count(mergedFilters);
   }
 

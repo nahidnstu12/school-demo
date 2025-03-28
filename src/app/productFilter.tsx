@@ -132,6 +132,7 @@ export default function ProductList() {
         orderBy: { [filterValues.sortField]: filterValues.sortDirection },
         skip: (pageNumber - 1) * pageSize,
         take: pageSize,
+        page: pageNumber,
       };
 
       // Add search filter
@@ -176,7 +177,6 @@ export default function ProductList() {
       // Send to server
       const formData = new FormData();
       formData.append('filter', JSON.stringify(filter));
-
       const result = await getProductsWithFilter(formData);
 
       if (result.success) {
@@ -394,7 +394,7 @@ export default function ProductList() {
           <div className="p-8 text-center">No products found matching your filters.</div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4 p-4">
               {products.map((product: Product) => (
                 <div key={product.id} className="border rounded overflow-hidden hover:shadow-lg">
                   {/* Image */}

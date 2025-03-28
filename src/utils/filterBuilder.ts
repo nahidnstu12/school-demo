@@ -10,6 +10,8 @@ export class FilterBuilder {
 
   // Return the final filter object
   build() {
+    console.log('filter>', this.filter);
+
     return this.filter;
   }
 

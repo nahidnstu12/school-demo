@@ -59,8 +59,6 @@ abstract class BaseService<T, CreateInput, UpdateInput, M extends IModel<T>, DTO
     // Fetch data with pagination
     const data = await this.model.findMany(paginatedFilters);
 
-    console.log('base service>', data.length);
-
     // Get total count for pagination metadata
     const total = await this.model.count(filters);
 
@@ -70,6 +68,7 @@ abstract class BaseService<T, CreateInput, UpdateInput, M extends IModel<T>, DTO
     // Transform data if needed
     const transformedData = this.transformData(data, transformMethod);
 
+    console.log('base service>', data.length, total);
     // Return data with pagination metadata
     return {
       data: transformedData,
