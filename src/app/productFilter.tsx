@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
-import { useState, useEffect, FormEvent } from 'react';
+import { useDynamicFilters } from '@/hooks/useDynamicFilter';
+import { filterConfig } from '@/utils/default-value';
+import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import {
-  getProductsWithFilter,
   getProductCategories,
+  getProductsWithFilter,
   getProductTags,
 } from '../actions/product.action';
 
@@ -43,18 +44,20 @@ interface Product {
 }
 
 export default function ProductList() {
-  // State for filter form values
-  const [filterValues, setFilterValues] = useState({
-    search: '',
-    category: '',
-    minPrice: '',
-    maxPrice: '',
-    tag: '',
-    inStock: false,
-    featured: false,
-    sortField: 'createdAt',
-    sortDirection: 'desc',
-  });
+  // Use the dynamic filters hook for URL persistence
+  const {
+    prismaFilter,
+    setFilter,
+    setRangeFilter,
+    applyFilters,
+    setPage,
+    setPageSize,
+    setSort,
+    clearAllFilters,
+    getFilterValue,
+    page,
+    pageSize,
+  } = useDynamicFilters(filterConfig);
 
   // State for products and metadata
   const [products, setProducts] = useState<Product[]>([]);
@@ -63,146 +66,146 @@ export default function ProductList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Pagination state
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
-
   // Calculate pagination values
   const totalPages = Math.ceil(total / pageSize);
   const startItem = (page - 1) * pageSize + 1;
   const endItem = Math.min(page * pageSize, total);
 
-  // Handle form input changes
+  // Handle form input changes (only updates form state, not URL)
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
     if (type === 'checkbox') {
-      setFilterValues({
-        ...filterValues,
-        [name]: (e.target as HTMLInputElement).checked,
-      });
+      const checked = (e.target as HTMLInputElement).checked;
+      if (name === 'inStock') {
+        // Special case for inStock - it needs to be converted to a stock > 0 filter
+        if (checked) {
+          setFilter('stock', 'gte', 1);
+        } else {
+          setFilter('stock', 'gt', null); // Remove the filter
+        }
+      } else {
+        // For other checkboxes like featured
+        if (checked) setFilter(name, 'equals', checked);
+        else setFilter(name, 'equals', null);
+      }
+    } else if (name === 'minPrice' || name === 'maxPrice') {
+      // Handle price range
+      const minPrice = name === 'minPrice' ? value : getFilterValue('price')?.min;
+      const maxPrice = name === 'maxPrice' ? value : getFilterValue('price')?.max;
+      setRangeFilter(
+        'price',
+        minPrice ? parseFloat(minPrice) : undefined,
+        maxPrice ? parseFloat(maxPrice) : undefined
+      );
     } else {
-      setFilterValues({
-        ...filterValues,
-        [name]: value,
-      });
+      // For text and select inputs
+      setFilter(
+        name === 'search' ? 'name' : name,
+        name === 'search' ? 'contains' : 'equals',
+        value
+      );
     }
   };
 
-  // Handle sort change
+  // Handle sort change (this updates immediately since it's a common UX pattern)
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const [field, direction] = e.target.value.split(':');
-    setFilterValues({
-      ...filterValues,
-      sortField: field,
-      sortDirection: direction,
-    });
+    setSort(field, direction as 'asc' | 'desc');
   };
 
-  // Handle form submission
+  // Handle form submission - this is when we apply filters to URL and trigger data fetch
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await fetchProducts(1); // Reset to first page on new search
+    applyFilters(); // Apply form filters to URL and trigger data fetch
   };
 
   // Clear all filters
   const clearFilters = () => {
-    setFilterValues({
-      search: '',
-      category: '',
-      minPrice: '',
-      maxPrice: '',
-      tag: '',
-      inStock: false,
-      featured: false,
-      sortField: 'createdAt',
-      sortDirection: 'desc',
-    });
-    // Don't fetch here - wait for submit button
+    clearAllFilters(); // This will also trigger data fetch
   };
 
+  // Create a ref to store the current fetch controller
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const lastFetchUrlRef = useRef<string>('');
+
   // Function to fetch products based on current filters
-  const fetchProducts = async (pageNumber: number = page) => {
+  const fetchProducts = async () => {
+    // First abort any ongoing fetch
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create a new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
     setLoading(true);
 
     try {
-      // Build filter object
-      const filter: any = {
-        where: {},
-        orderBy: { [filterValues.sortField]: filterValues.sortDirection },
-        skip: (pageNumber - 1) * pageSize,
-        take: pageSize,
-        page: pageNumber,
-      };
+      // Get the CURRENT URL from the browser to ensure we're using the latest params
+      const currentUrl = new URL(window.location.href);
+      const urlString = currentUrl.search;
 
-      // Add search filter
-      if (filterValues.search) {
-        filter.where.name = { contains: filterValues.search };
+      // If this is the same URL as the last fetch, skip to prevent duplicates
+      if (urlString === lastFetchUrlRef.current && urlString !== '') {
+        console.log('Skipping duplicate fetch for URL:', urlString);
+        setLoading(false);
+        return;
       }
 
-      // Add category filter
-      if (filterValues.category) {
-        filter.where.category = { equals: filterValues.category };
-      }
-
-      // Add price range filter
-      if (filterValues.minPrice || filterValues.maxPrice) {
-        filter.where.price = {};
-
-        if (filterValues.minPrice) {
-          filter.where.price.gte = parseFloat(filterValues.minPrice);
-        }
-
-        if (filterValues.maxPrice) {
-          filter.where.price.lte = parseFloat(filterValues.maxPrice);
-        }
-      }
-
-      // Add tag filter
-      if (filterValues.tag) {
-        // This assumes you have a proper way to query JSON fields in your backend
-        filter.where.tags = { contains: filterValues.tag };
-      }
-
-      // Add stock filter
-      if (filterValues.inStock) {
-        filter.where.stock = { gt: 0 };
-      }
-
-      // Add featured filter
-      if (filterValues.featured) {
-        filter.where.featured = { equals: true };
-      }
+      // Remember this URL for future deduplication
+      lastFetchUrlRef.current = urlString;
 
       // Send to server
       const formData = new FormData();
-      formData.append('filter', JSON.stringify(filter));
+      formData.append('filter', JSON.stringify(prismaFilter));
+
       const result = await getProductsWithFilter(formData);
 
-      if (result.success) {
-        setProducts(result.data.data);
-        setTotal(result.data.total);
-        setPage(pageNumber); // Update page after successful fetch
-      } else {
-        console.error('Error fetching products:', result.errors);
+      // Only update state if this request wasn't aborted
+      if (!abortControllerRef.current.signal.aborted) {
+        if (result.success) {
+          setProducts(result.data.data);
+          setTotal(result.data.total);
+        } else {
+          console.error('Error fetching products:', result.errors);
+        }
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
+      // Only log errors for non-aborted requests
+      if (error.name !== 'AbortError') {
+        console.error('Error fetching products:', error);
+      }
     } finally {
-      setLoading(false);
+      // Only update loading state if this request wasn't aborted
+      if (!abortControllerRef.current?.signal.aborted) {
+        setLoading(false);
+      }
     }
   };
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
-    fetchProducts(newPage);
+    setPage(newPage); // This will update URL and trigger data fetch
   };
 
   // Handle page size change
   const handlePageSizeChange = (newSize: number) => {
-    setPageSize(newSize);
-    fetchProducts(1); // Reset to first page when changing page size
+    setPageSize(newSize); // This will update URL and trigger data fetch
   };
+
+  // Get filter values for form controls
+  const searchValue = getFilterValue('name') || '';
+  const categoryValue = getFilterValue('category') || '';
+  const tagValue = getFilterValue('tag') || '';
+  const priceRange = getFilterValue('price') || { min: '', max: '' };
+  const inStockValue = !!getFilterValue('stock')?.min;
+  const featuredValue = getFilterValue('featured'); //todo: fix
+
+  // Determine current sort value for the select input
+  const sortValue = prismaFilter.orderBy
+    ? `${Object.keys(prismaFilter.orderBy)[0]}:${Object.values(prismaFilter.orderBy)[0]}`
+    : 'createdAt:desc';
 
   // Fetch categories and tags on mount
   useEffect(() => {
@@ -210,7 +213,6 @@ export default function ProductList() {
       try {
         // Fetch categories
         const categoriesResult = await getProductCategories();
-        console.log(categoriesResult);
 
         if (categoriesResult.success) {
           setCategories(categoriesResult.data);
@@ -227,8 +229,14 @@ export default function ProductList() {
     };
 
     fetchMetadata();
-    fetchProducts(); // Initial product fetch
   }, []);
+
+  // Fetch products when prismaFilter changes
+  useEffect(() => {
+    if (Object.keys(prismaFilter).length > 0) {
+      fetchProducts();
+    }
+  }, [prismaFilter]);
 
   return (
     <div className="container mx-auto p-4">
@@ -246,7 +254,7 @@ export default function ProductList() {
               id="search"
               name="search"
               type="text"
-              value={filterValues.search}
+              value={searchValue}
               onChange={handleInputChange}
               placeholder="Search products..."
               className="w-full p-2 border rounded"
@@ -261,7 +269,7 @@ export default function ProductList() {
             <select
               id="category"
               name="category"
-              value={filterValues.category}
+              value={categoryValue}
               onChange={handleInputChange}
               className="w-full p-2 border rounded"
             >
@@ -281,7 +289,7 @@ export default function ProductList() {
               <input
                 type="number"
                 name="minPrice"
-                value={filterValues.minPrice}
+                value={priceRange.min}
                 onChange={handleInputChange}
                 placeholder="Min"
                 className="w-full p-2 border rounded"
@@ -290,7 +298,7 @@ export default function ProductList() {
               <input
                 type="number"
                 name="maxPrice"
-                value={filterValues.maxPrice}
+                value={priceRange.max}
                 onChange={handleInputChange}
                 placeholder="Max"
                 className="w-full p-2 border rounded"
@@ -308,7 +316,7 @@ export default function ProductList() {
             <select
               id="tag"
               name="tag"
-              value={filterValues.tag}
+              value={tagValue}
               onChange={handleInputChange}
               className="w-full p-2 border rounded"
             >
@@ -327,7 +335,7 @@ export default function ProductList() {
               <input
                 type="checkbox"
                 name="inStock"
-                checked={filterValues.inStock}
+                checked={inStockValue}
                 onChange={handleInputChange}
                 className="mr-1"
               />
@@ -338,7 +346,7 @@ export default function ProductList() {
               <input
                 type="checkbox"
                 name="featured"
-                checked={filterValues.featured}
+                checked={featuredValue}
                 onChange={handleInputChange}
                 className="mr-1"
               />
@@ -351,11 +359,7 @@ export default function ProductList() {
         <div className="mt-4 flex justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Sort By:</span>
-            <select
-              onChange={handleSortChange}
-              value={`${filterValues.sortField}:${filterValues.sortDirection}`}
-              className="p-2 border rounded"
-            >
+            <select onChange={handleSortChange} value={sortValue} className="p-2 border rounded">
               <option value="name:asc">Name (A-Z)</option>
               <option value="name:desc">Name (Z-A)</option>
               <option value="price:asc">Price (Low to High)</option>
@@ -558,7 +562,7 @@ export default function ProductList() {
         <div className="mt-8 p-4 bg-gray-100 rounded">
           <h3 className="font-bold mb-2">Debug - Current Filter:</h3>
           <pre className="bg-white p-4 rounded overflow-auto text-sm">
-            {JSON.stringify(filterValues, null, 2)}
+            {JSON.stringify(prismaFilter, null, 2)}
           </pre>
         </div>
       )}

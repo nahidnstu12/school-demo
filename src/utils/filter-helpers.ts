@@ -14,6 +14,7 @@ export type FilterOperator =
   | 'between';
 
 export type FilterFieldConfig = {
+  // type: string | number | boolean   ;
   type: 'string' | 'number' | 'boolean' | 'date' | 'array';
   defaultOperator?: FilterOperator;
   urlParam?: string; // Custom URL param name (defaults to field name)

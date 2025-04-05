@@ -6,25 +6,33 @@ import {
   FilterUrlUtils,
   SimpleFilter,
 } from '@/utils/filter-helpers';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 /**
- * Custom hook for dynamic URL filtering
+ * Custom hook for dynamic URL filtering with synchronous URL updates
  */
 export function useDynamicFilters(config: FilterConfig) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Initialize empty filter state
+  // Use refs to prevent infinite loops
+  const isUpdatingFromUrl = useRef(false);
+  const initialUrlParseComplete = useRef(false);
+  const lastAppliedUrl = useRef<string | null>(null);
+
+  // State for current filter (managed by form but not yet applied)
   const [filterState, setFilterState] = useState<FilterState>({
     filters: [],
     page: 1,
-    pageSize: config.defaultPageSize || 10,
+    pageSize: config.defaultPageSize || 12,
     sort: config.defaultSort ? [config.defaultSort] : [],
   });
 
-  // Generate Prisma-compatible filter object from current state
+  // State for applied filter (will be used for API calls)
+  const [appliedFilterState, setAppliedFilterState] = useState<FilterState>(filterState);
+
+  // Generate Prisma-compatible filter object from current applied state
   const [prismaFilter, setPrismaFilter] = useState({});
 
   /**
@@ -136,9 +144,13 @@ export function useDynamicFilters(config: FilterConfig) {
 
   /**
    * Update URL with current filter state
+   * @returns The URL string that was set
    */
   const updateUrl = useCallback(
-    (state: FilterState) => {
+    (state: FilterState): string => {
+      // Skip if we're currently updating from URL to prevent loops
+      if (isUpdatingFromUrl.current) return '';
+
       const params = new URLSearchParams();
 
       // Add pagination
@@ -146,7 +158,7 @@ export function useDynamicFilters(config: FilterConfig) {
         params.set('page', state.page.toString());
       }
 
-      if (state.pageSize !== (config.defaultPageSize || 10)) {
+      if (state.pageSize) {
         params.set('pageSize', state.pageSize.toString());
       }
 
@@ -189,8 +201,14 @@ export function useDynamicFilters(config: FilterConfig) {
         params.set('advanced', JSON.stringify(state.advancedFilters));
       }
 
+      // Construct the URL string
+      const urlString = params.toString();
+
       // Update URL
-      router.push(`?${params.toString()}`, { scroll: false });
+      router.push(`?${urlString}`, { scroll: false });
+
+      // Return the URL for potential synchronous usage
+      return urlString;
     },
     [router, config]
   );
@@ -299,171 +317,210 @@ export function useDynamicFilters(config: FilterConfig) {
     }
   };
 
-  // Initialize from URL on mount
+  // Initialize from URL on mount - only once
   useEffect(() => {
-    const newState = parseFiltersFromUrl();
-    setFilterState(newState);
+    if (!initialUrlParseComplete.current) {
+      initialUrlParseComplete.current = true;
+      isUpdatingFromUrl.current = true;
 
-    // Generate Prisma filter
-    const newPrismaFilter = buildPrismaFilter(newState);
-    setPrismaFilter(newPrismaFilter);
-  }, [searchParams, parseFiltersFromUrl, buildPrismaFilter]);
+      try {
+        const newState = parseFiltersFromUrl();
+        setFilterState(newState);
+        setAppliedFilterState(newState);
 
-  // Filter manipulation functions
-  const setFilter = useCallback(
-    (field: string, operator: FilterOperator, value: any) => {
-      setFilterState((prev) => {
-        // Remove any existing filter for this field
-        const existingFilters = prev.filters.filter((f) => f.field !== field);
-
-        // Add the new filter
-        const newFilters = [...existingFilters];
-
-        // Only add if value is not empty
-        if (value !== undefined && value !== null && value !== '') {
-          newFilters.push({ field, operator, value });
-        }
-
-        // Create new state with page reset
-        const newState = {
-          ...prev,
-          filters: newFilters,
-          page: 1,
-        };
-
-        // Update URL and generate Prisma filter
-        updateUrl(newState);
         const newPrismaFilter = buildPrismaFilter(newState);
         setPrismaFilter(newPrismaFilter);
+      } catch (error) {
+        console.error('Error parsing URL filters:', error);
+      } finally {
+        isUpdatingFromUrl.current = false;
+      }
+    }
+  }, [parseFiltersFromUrl, buildPrismaFilter]);
 
-        return newState;
-      });
-    },
-    [updateUrl, buildPrismaFilter]
-  );
+  // Filter manipulation functions - these update the form state but don't apply yet
+  const updateFilterState = useCallback((field: string, operator: FilterOperator, value: any) => {
+    setFilterState((prev) => {
+      // Remove any existing filter for this field
+      const existingFilters = prev.filters.filter((f) => f.field !== field);
 
-  const removeFilter = useCallback(
-    (field: string) => {
-      setFilterState((prev) => {
-        // Remove filter for this field
-        const newFilters = prev.filters.filter((f) => f.field !== field);
+      // Add the new filter
+      const newFilters = [...existingFilters];
 
-        // Create new state with page reset
-        const newState = {
-          ...prev,
-          filters: newFilters,
-          page: 1,
-        };
+      // Only add if value is not empty
+      if (value !== undefined && value !== null && value !== '') {
+        newFilters.push({ field, operator, value });
+      }
 
-        // Update URL and generate Prisma filter
-        updateUrl(newState);
-        const newPrismaFilter = buildPrismaFilter(newState);
-        setPrismaFilter(newPrismaFilter);
+      // Return new state without updating URL or prismaFilter yet
+      return {
+        ...prev,
+        filters: newFilters,
+      };
+    });
+  }, []);
 
-        return newState;
-      });
-    },
-    [updateUrl, buildPrismaFilter]
-  );
-
-  const setRangeFilter = useCallback(
+  const updateRangeFilter = useCallback(
     (field: string, min?: any, max?: any) => {
-      if ((min === undefined || min === null) && (max === undefined || max === null)) {
+      if (
+        (min === undefined || min === null || min === '') &&
+        (max === undefined || max === null || max === '')
+      ) {
         // If both values are empty, remove the filter
-        removeFilter(field);
+        setFilterState((prev) => {
+          const newFilters = prev.filters.filter((f) => f.field !== field);
+          return {
+            ...prev,
+            filters: newFilters,
+          };
+        });
         return;
       }
 
-      if (min !== undefined && min !== null && max !== undefined && max !== null) {
+      if (
+        min !== undefined &&
+        min !== null &&
+        min !== '' &&
+        max !== undefined &&
+        max !== null &&
+        max !== ''
+      ) {
         // Both values - use between
-        setFilter(field, 'between', [min, max]);
-      } else if (min !== undefined && min !== null) {
+        updateFilterState(field, 'between', [min, max]);
+      } else if (min !== undefined && min !== null && min !== '') {
         // Just min - use gte
-        setFilter(field, 'gte', min);
-      } else if (max !== undefined && max !== null) {
+        updateFilterState(field, 'gte', min);
+      } else if (max !== undefined && max !== null && max !== '') {
         // Just max - use lte
-        setFilter(field, 'lte', max);
+        updateFilterState(field, 'lte', max);
       }
     },
-    [setFilter, removeFilter]
+    [updateFilterState]
   );
 
-  const setAdvancedFilters = useCallback(
-    (advancedFilters: AdvancedFilters) => {
-      setFilterState((prev) => {
-        const newState = {
+  // Apply the current filter state - this triggers URL update and data fetch
+  const applyFilters = useCallback(() => {
+    // Create a new state based on current filter state (reset to page 1)
+    const newState = { ...filterState, page: 1 };
+
+    // IMPORTANT: Update URL FIRST
+    updateUrl(newState);
+
+    // Then update local state
+    setFilterState(newState);
+
+    // Wait for the next tick to ensure URL update has been processed
+    setTimeout(() => {
+      setAppliedFilterState(newState);
+
+      // Update prisma filter
+      const newPrismaFilter = buildPrismaFilter(newState);
+      setPrismaFilter(newPrismaFilter);
+    }, 0);
+  }, [filterState, updateUrl, buildPrismaFilter]);
+
+  // Apply just pagination changes without changing filters
+  const updatePage = useCallback(
+    (newPage: number) => {
+      const newState = {
+        ...appliedFilterState,
+        page: newPage,
+      };
+
+      // UPDATE URL FIRST - this is the key change
+      updateUrl(newState);
+
+      // Then update state
+      setFilterState((prev) => ({
+        ...prev,
+        page: newPage,
+      }));
+
+      setAppliedFilterState((prev) => {
+        const updatedState = {
           ...prev,
-          advancedFilters,
+          page: newPage,
+        };
+
+        // Update prisma filter
+        const newPrismaFilter = buildPrismaFilter(updatedState);
+        setPrismaFilter(newPrismaFilter);
+
+        return updatedState;
+      });
+    },
+    [appliedFilterState, updateUrl, buildPrismaFilter]
+  );
+
+  // Apply just page size changes without changing filters
+  const updatePageSize = useCallback(
+    (newPageSize: number) => {
+      console.log('New page size:', newPageSize);
+
+      const newState = {
+        ...appliedFilterState,
+        pageSize: newPageSize,
+        page: 1, // Reset to page 1 when changing page size
+      };
+
+      // UPDATE URL FIRST before updating state
+      updateUrl(newState);
+
+      // Then update state
+      setFilterState((prev) => ({
+        ...prev,
+        pageSize: newPageSize,
+        page: 1,
+      }));
+
+      setAppliedFilterState((prev) => {
+        const updatedState = {
+          ...prev,
+          pageSize: newPageSize,
           page: 1,
         };
 
-        // Update URL and generate Prisma filter
-        updateUrl(newState);
-        const newPrismaFilter = buildPrismaFilter(newState);
+        // Update prisma filter AFTER URL is updated
+        const newPrismaFilter = buildPrismaFilter(updatedState);
         setPrismaFilter(newPrismaFilter);
 
-        return newState;
+        return updatedState;
       });
     },
-    [updateUrl, buildPrismaFilter]
+    [appliedFilterState, updateUrl, buildPrismaFilter]
   );
 
-  const setSort = useCallback(
+  // Apply just sort changes without changing filters
+  const updateSort = useCallback(
     (field: string, direction: 'asc' | 'desc' = 'asc') => {
-      setFilterState((prev) => {
-        const newState = {
+      const newState = {
+        ...appliedFilterState,
+        sort: [{ field, direction }],
+      };
+
+      // UPDATE URL FIRST
+      updateUrl(newState);
+
+      // Then update state
+      setFilterState((prev) => ({
+        ...prev,
+        sort: [{ field, direction }],
+      }));
+
+      setAppliedFilterState((prev) => {
+        const updatedState = {
           ...prev,
           sort: [{ field, direction }],
         };
 
-        // Update URL and generate Prisma filter
-        updateUrl(newState);
-        const newPrismaFilter = buildPrismaFilter(newState);
+        // Update prisma filter
+        const newPrismaFilter = buildPrismaFilter(updatedState);
         setPrismaFilter(newPrismaFilter);
 
-        return newState;
+        return updatedState;
       });
     },
-    [updateUrl, buildPrismaFilter]
-  );
-
-  const setPage = useCallback(
-    (page: number) => {
-      setFilterState((prev) => {
-        const newState = {
-          ...prev,
-          page,
-        };
-
-        // Update URL and generate Prisma filter
-        updateUrl(newState);
-        const newPrismaFilter = buildPrismaFilter(newState);
-        setPrismaFilter(newPrismaFilter);
-
-        return newState;
-      });
-    },
-    [updateUrl, buildPrismaFilter]
-  );
-
-  const setPageSize = useCallback(
-    (pageSize: number) => {
-      setFilterState((prev) => {
-        const newState = {
-          ...prev,
-          pageSize,
-          page: 1,
-        };
-
-        // Update URL and generate Prisma filter
-        updateUrl(newState);
-        const newPrismaFilter = buildPrismaFilter(newState);
-        setPrismaFilter(newPrismaFilter);
-
-        return newState;
-      });
-    },
-    [updateUrl, buildPrismaFilter]
+    [appliedFilterState, updateUrl, buildPrismaFilter]
   );
 
   const clearAllFilters = useCallback(() => {
@@ -474,13 +531,46 @@ export function useDynamicFilters(config: FilterConfig) {
       sort: config.defaultSort ? [config.defaultSort] : [],
     };
 
-    setFilterState(newState);
+    // UPDATE URL FIRST
     updateUrl(newState);
+
+    // Update both states
+    setFilterState(newState);
+    setAppliedFilterState(newState);
+
+    // Update prisma filter
     const newPrismaFilter = buildPrismaFilter(newState);
     setPrismaFilter(newPrismaFilter);
   }, [config, updateUrl, buildPrismaFilter]);
 
-  // Get active filter value
+  // Listen for URL changes that happen outside of our control
+  useEffect(() => {
+    // Skip the first render and our own updates
+    if (isUpdatingFromUrl.current) return;
+
+    // Get the current URL search params as a string
+    const currentParams = searchParams.toString();
+
+    // If it's different from our last applied URL, update our state
+    if (currentParams !== lastAppliedUrl.current) {
+      isUpdatingFromUrl.current = true;
+      try {
+        const newState = parseFiltersFromUrl();
+        setFilterState(newState);
+        setAppliedFilterState(newState);
+
+        const newPrismaFilter = buildPrismaFilter(newState);
+        setPrismaFilter(newPrismaFilter);
+
+        // Remember this URL
+        lastAppliedUrl.current = currentParams;
+      } finally {
+        isUpdatingFromUrl.current = false;
+      }
+    }
+  }, [searchParams, parseFiltersFromUrl, buildPrismaFilter]);
+
+  // Get active filter value for form controls
   const getFilterValue = useCallback(
     (field: string) => {
       const filter = filterState.filters.find((f) => f.field === field);
@@ -488,9 +578,9 @@ export function useDynamicFilters(config: FilterConfig) {
 
       if (filter.operator === 'between' && Array.isArray(filter.value)) {
         return { min: filter.value[0], max: filter.value[1] };
-      } else if (filter.operator === 'gte') {
+      } else if (filter.operator === 'gte' || filter.operator === 'gt') {
         return { min: filter.value };
-      } else if (filter.operator === 'lte') {
+      } else if (filter.operator === 'lte' || filter.operator === 'lt') {
         return { max: filter.value };
       }
 
@@ -500,24 +590,25 @@ export function useDynamicFilters(config: FilterConfig) {
   );
 
   return {
-    // Current state
+    // Current form state (not yet applied)
     filters: filterState.filters,
     advancedFilters: filterState.advancedFilters,
     sort: filterState.sort,
-    page: filterState.page,
-    pageSize: filterState.pageSize,
+    page: appliedFilterState.page, // Use applied state for pagination
+    pageSize: appliedFilterState.pageSize, // Use applied state for pagination
 
     // Generated Prisma filter
     prismaFilter,
 
-    // State manipulation methods
-    setFilter,
-    removeFilter,
-    setRangeFilter,
-    setAdvancedFilters,
-    setSort,
-    setPage,
-    setPageSize,
+    // Form state manipulation methods (doesn't update URL)
+    setFilter: updateFilterState,
+    setRangeFilter: updateRangeFilter,
+
+    // Applied state methods (updates URL and triggers data fetch)
+    applyFilters,
+    setPage: updatePage,
+    setPageSize: updatePageSize,
+    setSort: updateSort,
     clearAllFilters,
 
     // Helper methods
@@ -525,5 +616,6 @@ export function useDynamicFilters(config: FilterConfig) {
 
     // For debug
     filterState,
+    appliedFilterState,
   };
 }

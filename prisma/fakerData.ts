@@ -469,3 +469,146 @@ export const mockproducts = [
       ]
     }
   ];
+
+  import { v4 as uuidv4 } from 'uuid';
+
+// Define teacher specializations
+const specializations = [
+  'Mathematics', 
+  'Physics', 
+  'Chemistry', 
+  'Biology', 
+  'English Literature',
+  'History', 
+  'Geography', 
+  'Computer Science', 
+  'Physical Education',
+  'Art', 
+  'Music', 
+  'Economics', 
+  'Business Studies',
+  'Foreign Languages', 
+  'Social Sciences'
+];
+
+// Define designations
+const designations = [
+  'Junior Teacher',
+  'Senior Teacher',
+  'Head of Department',
+  'Assistant Professor',
+  'Associate Professor',
+  'Professor',
+  'Lecturer',
+  'Visiting Faculty',
+  'Teaching Assistant',
+  'Subject Coordinator'
+];
+
+// Helper to get random item from array
+const getRandomItem = <T>(array: T[]): T => {
+  return array[Math.floor(Math.random() * array.length)];
+};
+
+// Helper to create a random date between two dates
+const randomDate = (start: Date, end: Date): Date => {
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+};
+
+// Create mock teacher data generator
+const generateMockTeacher = (index: number) => {
+  const firstName = `Teacher${index}`;
+  const lastName = `Last${index}`;
+  const id = uuidv4();
+  const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${Math.floor(Math.random() * 10000)}@example.com`;
+  
+  return {
+    id,
+    firstName,
+    lastName,
+    email,
+    phone: `+1${Math.floor(Math.random() * 10000000000).toString().padStart(10, '0')}`,
+    designation: getRandomItem(designations),
+    specialization: getRandomItem(specializations),
+    joiningDate: randomDate(new Date('2015-01-01'), new Date()).toISOString(),
+    address: `${Math.floor(Math.random() * 1000) + 1} Main St, City ${Math.floor(Math.random() * 100) + 1}`,
+    district: `District ${Math.floor(Math.random() * 20) + 1}`,
+    education: {
+      degree: getRandomItem(['Bachelor of Education', 'Master of Education', 'Ph.D. in Education', 'Master of Arts', 'Bachelor of Science', 'Master of Science', 'Ph.D.']),
+      university: getRandomItem(['State University', 'National University', 'City College', 'Technical Institute', 'International University']),
+      graduationYear: Math.floor(Math.random() * 20) + 2000
+    },
+    certifications: Array.from({ length: Math.floor(Math.random() * 3) + 1 }, () => 
+      getRandomItem([
+        'Teaching Certification',
+        'Subject Matter Expert',
+        'Educational Leadership',
+        'Special Education',
+        'Technology in Education',
+        'Advanced Instructional Methods',
+        'Curriculum Development'
+      ])
+    ),
+    yearsOfExperience: Math.floor(Math.random() * 20) + 1,
+    status: Math.random() > 0.1 // 90% active
+  };
+};
+
+// Generate data for 500 teachers (50 teachers per 10 institutions)
+export const mockTeachers = Array.from({ length: 500 }, (_, i) => generateMockTeacher(i + 1));
+
+
+// {
+//   "id": "cm93ri2c701ptgvpdcuvx7sew",
+//   "institutionId": "cm93r6vwq000ngvpde7kgvthn",
+//   "userId": "cm93ri27501ongvpdonlh62tk",
+//   "pdsId": null,
+//   "designation": "Teaching Assistant",
+//   "joiningDate": "2025-04-02T02:23:56.762Z",
+//   "address": "347 Main St, City 53",
+//   "district": "District 12",
+//   "specialization": "Art",
+//   "status": false,
+//   "createdAt": "2025-04-05T05:17:21.994Z",
+//   "updatedAt": "2025-04-05T05:17:21.994Z",
+//   "deleted": false,
+//   "user": {
+//       "id": "cm93ri27501ongvpdonlh62tk",
+//       "avatar": null,
+//       "firstName": "Teacher288",
+//       "lastName": "Last288",
+//       "phone": "+14103023273",
+//       "status": true,
+//       "email": "teacher288.last288758@example.com",
+//       "emailVerifiedAt": null,
+//       "password": "$2b$12$qJJWWpNo6xwR5gqKLoSMB.hdMyX5OeEVkVTkufnswYEdboXjFW9kC",
+//       "role": "TEACHER",
+//       "rememberToken": null,
+//       "createdAt": "2025-04-05T05:17:21.916Z",
+//       "updatedAt": "2025-04-05T05:17:21.916Z",
+//       "deleted": false
+//   },
+//   "institution": {
+//       "id": "cm93r6vwq000ngvpde7kgvthn",
+//       "userId": "cm93r6vuu0005gvpdc4rf1aie",
+//       "uuid": "2e97dea7-92f1-4f54-a506-56fd2253fdd1",
+//       "name": "Institution 6",
+//       "registrationNo": null,
+//       "noOfStudents": null,
+//       "noOfTeachers": null,
+//       "type": "PRIMARY_SCHOOL",
+//       "coverPhoto": "cm93r6uj40002gvpd4j1am4jw",
+//       "logo": "cm93r6uid0000gvpd9tkarjdo",
+//       "location": "Address 6",
+//       "contactNumber": "+12345678905",
+//       "address": "Street 6, City",
+//       "status": true,
+//       "limit": null,
+//       "extraInfos": {
+//           "details": "Additional information"
+//       },
+//       "createdAt": "2025-04-05T05:08:40.548Z",
+//       "updatedAt": "2025-04-05T05:08:40.548Z",
+//       "deleted": false
+//   }
+// }
