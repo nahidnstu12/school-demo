@@ -113,12 +113,12 @@ async function main() {
     console.log(`Seeding data for Institution: ${institution.name}`);
 
     // Calculate the slice of teachers for this institution (50 per institution)
-    const startIndex = instIndex * 50;
-    const endIndex = startIndex + 50;
+    const startIndex = instIndex * 10;
+    const endIndex = startIndex + 10;
     const institutionTeachers = mockTeachers.slice(startIndex, endIndex);
 
     // Create Teachers using the mock data
-    console.log('Creating 50 teachers...');
+    console.log('Creating teachers...');
     const teachers = await Promise.all(
       institutionTeachers.map(async (teacherData) => {
         const user = await prisma.user.create({

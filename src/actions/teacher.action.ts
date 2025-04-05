@@ -41,6 +41,8 @@ class TeacherServerAction extends BaseServerAction<
       );
       const sortField = searchParams.get('sort') || 'joiningDate';
       const sortDirection = (searchParams.get('dir') || 'desc') as 'asc' | 'desc';
+
+      // Get search term from search parameter
       const searchTerm = searchParams.get('search') || '';
 
       console.log('Server action using:', { page, pageSize, sortField, sortDirection, searchTerm });
@@ -53,13 +55,29 @@ class TeacherServerAction extends BaseServerAction<
         try {
           filterObject = JSON.parse(filterJson);
 
+          // Dump the raw filter object for debugging
+          console.log('Raw filter object:', JSON.stringify(filterObject, null, 2));
+
           // Ensure pagination settings use URL values
           filterObject.skip = (page - 1) * pageSize;
           filterObject.take = pageSize;
+
+          // Process the filter object to handle special fields and relations
+          this.processFilterObject(filterObject);
         } catch (error) {
           console.error('Error parsing filter JSON:', error);
-          filterObject = {};
+          filterObject = {
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+            where: {},
+          };
         }
+      } else {
+        filterObject = {
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          where: {},
+        };
       }
 
       // Ensure sorting settings use URL values
@@ -67,33 +85,142 @@ class TeacherServerAction extends BaseServerAction<
         filterObject.orderBy = { [sortField]: sortDirection };
       }
 
-      // Handle name search (firstName + lastName in User model)
-      if (
-        searchTerm &&
-        (!filterObject.where || !this.hasNameSearchCondition(filterObject.where, searchTerm))
-      ) {
-        if (!filterObject.where) {
-          filterObject.where = {};
-        }
-
-        // Add search for first name or last name
-        filterObject.where.OR = [
-          { user: { firstName: { contains: searchTerm, mode: 'insensitive' } } },
-          { user: { lastName: { contains: searchTerm, mode: 'insensitive' } } },
-          { user: { email: { contains: searchTerm, mode: 'insensitive' } } },
-          { user: { phone: { contains: searchTerm, mode: 'insensitive' } } },
-          { pdsId: { contains: searchTerm, mode: 'insensitive' } },
-        ];
+      // Add global search if present
+      if (searchTerm) {
+        this.addGlobalSearch(filterObject, searchTerm);
       }
 
-      console.log('Final filter object:', JSON.stringify(filterObject, null, 2));
+      // Log the final processed filter object
+      console.log('Processed filter object:', JSON.stringify(filterObject, null, 2));
 
       // Get data with pagination
       const results = await this.service.findAllPaginated(page, pageSize, filterObject);
 
       return { success: true, data: results };
     } catch (error) {
+      console.error('Detailed error:', error);
       return this.handleServiceError(error);
+    }
+  }
+
+  /**
+   * Process the filter object to handle special fields and relation mappings
+   */
+  private processFilterObject(filterObject: any): void {
+    if (!filterObject.where) return;
+
+    // Helper function to process a single condition
+    const processCondition = (condition: any): any => {
+      if (!condition) return condition;
+
+      // Create a new processed condition
+      const processedCondition: any = {};
+
+      // Process each field in the condition
+      Object.entries(condition).forEach(([key, value]) => {
+        // Handle nested AND conditions
+        if (key === 'AND' && Array.isArray(value)) {
+          processedCondition.AND = (value as any[]).map((c) => processCondition(c));
+          return;
+        }
+
+        // Handle nested OR conditions
+        if (key === 'OR' && Array.isArray(value)) {
+          processedCondition.OR = (value as any[]).map((c) => processCondition(c));
+          return;
+        }
+
+        // Handle nested NOT conditions
+        if (key === 'NOT' && Array.isArray(value)) {
+          processedCondition.NOT = (value as any[]).map((c) => processCondition(c));
+          return;
+        }
+
+        // Handle relation fields
+        if (key === 'email') {
+          // Map email to user.email
+          processedCondition.user = { email: value };
+        } else if (key === 'phone') {
+          // Map phone to user.phone
+          processedCondition.user = { phone: value };
+        } else if (key.startsWith('user_')) {
+          // Map user_* fields to user.*
+          const userField = key.replace('user_', '');
+          processedCondition.user = { [userField]: value };
+        } else if (key === 'institutionName') {
+          // Map institutionName to institution.name
+          processedCondition.institution = { name: value };
+        } else if (key === 'search') {
+          // Skip search - handled separately
+          return;
+        } else {
+          // Keep direct fields as-is
+          processedCondition[key] = value;
+        }
+      });
+
+      return processedCondition;
+    };
+
+    // Process the top-level where condition
+    if (filterObject.where.AND) {
+      // Process AND conditions
+      filterObject.where.AND = Array.isArray(filterObject.where.AND)
+        ? filterObject.where.AND.map(processCondition)
+        : [processCondition(filterObject.where.AND)];
+    } else if (filterObject.where.OR) {
+      // Process OR conditions
+      filterObject.where.OR = Array.isArray(filterObject.where.OR)
+        ? filterObject.where.OR.map(processCondition)
+        : [processCondition(filterObject.where.OR)];
+    } else {
+      // Process direct conditions
+      filterObject.where = processCondition(filterObject.where);
+    }
+  }
+
+  /**
+   * Add global search to the filter object
+   */
+  private addGlobalSearch(filterObject: any, searchTerm: string): void {
+    if (!filterObject.where) {
+      filterObject.where = {};
+    }
+
+    // Create search conditions that use proper relation paths
+    const searchConditions = [
+      { user: { firstName: { contains: searchTerm, mode: 'insensitive' } } },
+      { user: { lastName: { contains: searchTerm, mode: 'insensitive' } } },
+      { user: { email: { contains: searchTerm, mode: 'insensitive' } } },
+      { user: { phone: { contains: searchTerm, mode: 'insensitive' } } },
+      { pdsId: { contains: searchTerm, mode: 'insensitive' } },
+      { designation: { contains: searchTerm, mode: 'insensitive' } },
+    ];
+
+    // Handle the different ways where conditions might be structured
+    if (!filterObject.where.AND && !filterObject.where.OR) {
+      // If there are no existing AND/OR conditions, create a new OR for search
+      filterObject.where = {
+        AND: [
+          filterObject.where, // Keep existing direct conditions
+          { OR: searchConditions }, // Add search conditions as OR
+        ],
+      };
+    } else if (filterObject.where.AND) {
+      // If there's an existing AND, add our search as another item in the AND array
+      if (!Array.isArray(filterObject.where.AND)) {
+        filterObject.where.AND = [filterObject.where.AND];
+      }
+      filterObject.where.AND.push({ OR: searchConditions });
+    } else if (filterObject.where.OR) {
+      // If there's an existing OR, wrap everything in an AND
+      const existingOr = filterObject.where.OR;
+      filterObject.where = {
+        AND: [
+          { OR: existingOr }, // Keep existing OR conditions
+          { OR: searchConditions }, // Add search conditions as OR
+        ],
+      };
     }
   }
 
@@ -119,29 +246,6 @@ class TeacherServerAction extends BaseServerAction<
     } catch (error) {
       return this.handleServiceError(error);
     }
-  }
-
-  /**
-   * Helper function to check if name search condition already exists
-   */
-  private hasNameSearchCondition(where: any, searchTerm: string): boolean {
-    if (!where) return false;
-
-    if (where.OR && Array.isArray(where.OR)) {
-      for (const condition of where.OR) {
-        if (
-          condition.user?.firstName?.contains === searchTerm ||
-          condition.user?.lastName?.contains === searchTerm ||
-          condition.user?.email?.contains === searchTerm ||
-          condition.user?.phone?.contains === searchTerm ||
-          condition.pdsId?.contains === searchTerm
-        ) {
-          return true;
-        }
-      }
-    }
-
-    return false;
   }
 }
 

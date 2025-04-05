@@ -12,15 +12,25 @@ import { useDynamicFilters } from '@/hooks/useDynamicFilter';
 // Define teacher type with necessary fields for display
 interface Teacher {
   id: string;
-  fullName: string;
-  institutionName: string;
+  fullName?: string; // Optional field from DTO
+  institutionName?: string; // Optional field from DTO
   institutionId: string;
-  phone: string | null;
-  email: string;
+  phone?: string | null;
+  email?: string;
   pdsId: string | null;
   designation: string;
   joiningDate: Date | null;
   status: boolean;
+  // Relations needed for direct access in the table
+  user: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+  };
+  institution: {
+    name: string;
+  };
 }
 
 export default function TeacherList() {
@@ -59,6 +69,7 @@ export default function TeacherList() {
   // Handle form input changes (only updates form state, not URL)
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    console.log('name>>', name);
 
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
@@ -73,8 +84,19 @@ export default function TeacherList() {
         maxDate ? new Date(maxDate) : undefined
       );
     } else if (name === 'search') {
-      // For search, we use the name field
-      setFilter('name', 'contains', value);
+      // For search, we'll handle this specially in the server action
+      // Just pass it through as a special search parameter
+      console.log('search options>>');
+
+      setFilter('search', 'contains', value);
+    } else if (name === 'email') {
+      // For email, we set it directly as email (not user_email)
+      // The server action will handle the relation mapping
+      setFilter('email', 'contains', value);
+    } else if (name === 'phone') {
+      // For phone, we set it directly as phone (not user_phone)
+      // The server action will handle the relation mapping
+      setFilter('phone', 'contains', value);
     } else {
       // For other inputs
       setFilter(
@@ -120,7 +142,7 @@ export default function TeacherList() {
       const urlString = currentUrl.search;
 
       // Skip if URL hasn't changed
-      if (urlString === lastFetchUrlRef.current && urlString !== '') {
+      if (urlString === lastFetchUrlRef.current) {
         console.log('Skipping duplicate fetch for URL:', urlString);
         setLoading(false);
         return;
@@ -146,7 +168,7 @@ export default function TeacherList() {
           console.error('Error fetching teachers:', result.errors);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       // Only log errors for non-aborted requests
       if (error.name !== 'AbortError') {
         console.error('Error fetching teachers:', error);
@@ -169,8 +191,8 @@ export default function TeacherList() {
     setPageSize(newSize); // This will update URL and trigger data fetch
   };
 
-  // Get filter values for form controls
-  const searchValue = getFilterValue('name') || '';
+  // Get filter values for form controls - FIXED to use the correct field names
+  const searchValue = getFilterValue('search') || '';
   const institutionValue = getFilterValue('institutionId') || '';
   const designationValue = getFilterValue('designation') || '';
   const emailValue = getFilterValue('email') || '';
@@ -190,8 +212,6 @@ export default function TeacherList() {
       try {
         // Fetch designations
         const designationsResult = await getTeacherDesignations();
-        console.log('designationsResult', designationsResult);
-
         if (designationsResult.success) {
           setDesignations(designationsResult.data);
         }
@@ -242,7 +262,7 @@ export default function TeacherList() {
             {/* Search */}
             <div>
               <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-                Search Name
+                Global Search
               </label>
               <input
                 type="text"
@@ -251,7 +271,7 @@ export default function TeacherList() {
                 value={searchValue}
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search by name..."
+                placeholder="Search name, email, phone, PDS ID..."
               />
             </div>
 
@@ -536,14 +556,14 @@ export default function TeacherList() {
                 teachers.map((teacher) => (
                   <tr key={teacher.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {teacher.user.firstName} {teacher.user.lastName}
+                      {teacher.user?.firstName} {teacher.user?.lastName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {teacher.institution.name}
+                      {teacher.institution?.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>{teacher.user.email}</div>
-                      <div>{teacher.user.phone || 'N/A'}</div>
+                      <div>{teacher.user?.email}</div>
+                      <div>{teacher.user?.phone || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {teacher.pdsId || 'N/A'}

@@ -555,7 +555,7 @@ const generateMockTeacher = (index: number) => {
 };
 
 // Generate data for 500 teachers (50 teachers per 10 institutions)
-export const mockTeachers = Array.from({ length: 500 }, (_, i) => generateMockTeacher(i + 1));
+export const mockTeachers = Array.from({ length: 100 }, (_, i) => generateMockTeacher(i + 1));
 
 
 // {
