@@ -20,31 +20,6 @@ class TeacherService extends BaseService<
   }
 
   /**
-   * Get paginated teachers with custom filter
-   */
-  //   async findAllPaginated(
-  //     page: number = 1,
-  //     pageSize: number = 10,
-  //     filterObject: Prisma.TeacherFindManyArgs = {}
-  //   ): Promise<{ data: TeacherDTO[]; total: number }> {
-  //     try {
-  //       // Use the model's findManyPaginated method
-  //       const result = await this.model.findManyPaginated(page, pageSize, filterObject);
-
-  //       // Transform data using DTO
-  //       const transformedData = this.dto.transformMany(result.data as any);
-
-  //       return {
-  //         data: transformedData,
-  //         total: result.total,
-  //       };
-  //     } catch (error) {
-  //       console.error('Error in findAllPaginated:', error);
-  //       throw error;
-  //     }
-  //   }
-
-  /**
    * Get all designations for dropdown
    */
   async getAllDesignations(): Promise<string[]> {

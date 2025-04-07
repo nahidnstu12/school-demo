@@ -69,7 +69,6 @@ export default function TeacherList() {
   // Handle form input changes (only updates form state, not URL)
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    console.log('name>>', name);
 
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
@@ -85,9 +84,7 @@ export default function TeacherList() {
       );
     } else if (name === 'search') {
       // For search, we'll handle this specially in the server action
-      // Just pass it through as a special search parameter
-      console.log('search options>>');
-
+      // Just pass it through as a special search parameter;
       setFilter('search', 'contains', value);
     } else if (name === 'email') {
       // For email, we set it directly as email (not user_email)

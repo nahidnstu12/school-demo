@@ -533,6 +533,7 @@ const generateMockTeacher = (index: number) => {
     joiningDate: randomDate(new Date('2015-01-01'), new Date()).toISOString(),
     address: `${Math.floor(Math.random() * 1000) + 1} Main St, City ${Math.floor(Math.random() * 100) + 1}`,
     district: `District ${Math.floor(Math.random() * 20) + 1}`,
+    pds_id: "T-" + uuidv4(),
     education: {
       degree: getRandomItem(['Bachelor of Education', 'Master of Education', 'Ph.D. in Education', 'Master of Arts', 'Bachelor of Science', 'Master of Science', 'Ph.D.']),
       university: getRandomItem(['State University', 'National University', 'City College', 'Technical Institute', 'International University']),

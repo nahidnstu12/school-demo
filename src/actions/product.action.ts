@@ -218,8 +218,6 @@ class ProductServerAction extends BaseServerAction<
       const sortDirection = (searchParams.get('dir') || 'desc') as 'asc' | 'desc';
       const searchTerm = searchParams.get('search') || '';
 
-      console.log('Server action using:', { page, pageSize });
-
       // 3. Build filter object based on URL and form data
       let filterObject: any;
 
