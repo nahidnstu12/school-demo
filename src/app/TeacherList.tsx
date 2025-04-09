@@ -49,6 +49,9 @@ export default function TeacherList() {
     pageSize,
   } = useDynamicFilters(teacherFilterConfig);
 
+  // Add type definition for prismaFilter
+  const typedPrismaFilter = prismaFilter as { orderBy?: Record<string, 'asc' | 'desc'> };
+
   // State for teachers and metadata
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [designations, setDesignations] = useState<string[]>([]);
@@ -199,8 +202,8 @@ export default function TeacherList() {
   const statusValue = getFilterValue('status');
 
   // Determine current sort value for the select input
-  const sortValue = prismaFilter.orderBy
-    ? `${Object.keys(prismaFilter.orderBy)[0]}:${Object.values(prismaFilter.orderBy)[0]}`
+  const sortValue = typedPrismaFilter.orderBy
+    ? `${Object.keys(typedPrismaFilter.orderBy)[0]}:${Object.values(typedPrismaFilter.orderBy)[0]}`
     : 'joiningDate:desc';
 
   // Fetch designations and institutions on mount

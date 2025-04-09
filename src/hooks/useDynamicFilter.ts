@@ -149,9 +149,11 @@ export function useDynamicFilters(config: FilterConfig) {
   const updateUrl = useCallback(
     (state: FilterState): string => {
       // Skip if we're currently updating from URL to prevent loops
+
       if (isUpdatingFromUrl.current) return '';
 
       const params = new URLSearchParams();
+      console.log('params>>', params, state);
 
       // Add pagination
       if (state.page > 1) {

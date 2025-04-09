@@ -10,7 +10,7 @@ export const teacherSchema = z.object({
   district: z.string().optional(),
   specialization: z.string().optional(),
   pdsId: z.string().optional(),
-  status: z.boolean().default(true),
+  status: z.boolean(),
 });
 
 export type TeacherFormValues = z.infer<typeof teacherSchema>;
@@ -20,7 +20,7 @@ export const teacherFilterConfig: FilterConfig = {
   defaultPageSize: 10,
   defaultSort: { field: 'joiningDate', direction: 'desc' as const },
   fields: {
-    name: {
+    search: {
       type: 'string',
       defaultOperator: 'contains',
     },

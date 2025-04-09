@@ -1,0 +1,50 @@
+import { z } from 'zod';
+
+// Base subject schema
+export const subjectSchema = z.object({
+  institutionId: z.string(),
+  levelId: z.string(),
+  name: z.string().min(1, 'Name is required'),
+  code: z.string().optional(),
+  creditHours: z.number().optional(),
+  description: z.string().optional(),
+  status: z.boolean(),
+});
+
+// Create subject schema (extends base schema)
+export const createSubjectSchema = subjectSchema;
+
+// Update subject schema (all fields optional except id)
+export const updateSubjectSchema = z.object({
+  id: z.string(),
+  institutionId: z.string().optional(),
+  levelId: z.string().optional(),
+  name: z.string().min(1, 'Name is required').optional(),
+  code: z.string().optional(),
+  creditHours: z.number().optional(),
+  description: z.string().optional(),
+  status: z.boolean().optional(),
+});
+
+// Filter schema for subject list
+export const subjectFilterSchema = z.object({
+  institutionId: z.string().optional(),
+  levelId: z.string().optional(),
+  name: z.string().optional(),
+  code: z.string().optional(),
+  status: z.boolean().optional(),
+});
+
+// Types
+export type SubjectFormValues = z.infer<typeof subjectSchema>;
+export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
+export type UpdateSubjectInput = z.infer<typeof updateSubjectSchema>;
+export type SubjectFilterInput = z.infer<typeof subjectFilterSchema>;
+
+// Filter configuration
+export const subjectFilterConfig = {
+  defaultPageSize: 10,
+  filterableFields: ['institutionId', 'levelId', 'name', 'code', 'status'],
+  sortableFields: ['name', 'code', 'createdAt'],
+  searchableFields: ['name', 'code', 'description'],
+};

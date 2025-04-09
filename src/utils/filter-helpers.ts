@@ -24,8 +24,8 @@ export type FilterFieldConfig = {
 
 export type FilterConfig = {
   fields: Record<string, FilterFieldConfig>;
-  defaultSort?: { field: string; direction: 'asc' | 'desc' };
-  defaultPageSize?: number;
+  defaultSort: { field: string; direction: 'asc' | 'desc' };
+  defaultPageSize: number;
 };
 
 export type SimpleFilter = {
