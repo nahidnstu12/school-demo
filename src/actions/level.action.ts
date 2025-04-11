@@ -26,4 +26,8 @@ export async function createLevel(formData: FormData) {
   return LevelActionInstance.create(formData);
 }
 
+export async function getAllLevels() {
+  return LevelActionInstance.getAll();
+}
+
 // export default LevelActionInstance;

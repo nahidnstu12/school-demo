@@ -5,6 +5,7 @@ import LevelForm from './LevelForm';
 import { getAllInstitutions } from '@/actions/institution.action';
 import ProductList from './productFilter';
 import TeacherList from './TeacherList';
+import SubjectList from './SubjectList';
 
 export default async function HomePage() {
   const institutions = await getAllInstitutions();
@@ -14,7 +15,8 @@ export default async function HomePage() {
     <>
       {/* <LevelForm institutions={institutions} /> <UserRegistrationForm /> */}
       {/* <ProductList /> */}
-      <TeacherList />
+      {/* <TeacherList /> */}
+      <SubjectList />
     </>
   );
 }
