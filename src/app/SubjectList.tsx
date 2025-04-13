@@ -15,9 +15,11 @@ interface Subject {
   institutionId: string;
   levelId: string;
   creditHours: number;
+  institutionName?: string;
+  levelName?: string;
 }
 
-const subjectFilterConfig: FilterConfig = {
+export const subjectFilterConfig: FilterConfig = {
   defaultPageSize: 10,
   defaultSort: { field: 'createdAt', direction: 'desc' as const },
   fields: {
@@ -46,6 +48,7 @@ export default function SubjectList() {
   const [levels, setLevels] = useState<Level[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [institutionId, setInstitutionId] = useState<string>('');
 
   // Refs for request tracking
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -64,14 +67,19 @@ export default function SubjectList() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
+    if (name === 'institutionId') setInstitutionId(value);
+
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFilter(name, 'equals', checked);
     } else {
       // For other inputs
+      console.log('handleChange>>', name, value);
+
       setFilter(
         name,
-        name === 'institutionId' || name === 'designation' ? 'equals' : 'contains',
+        // name === 'institutionId' || name === 'designation' ? 'equals' : 'contains',
+        subjectFilterConfig.fields[name].defaultOperator || 'contains',
         value
       );
     }
@@ -116,7 +124,6 @@ export default function SubjectList() {
       console.log('Fetching teachers with filter:', prismaFilter);
 
       const result = await getSubjectsWithFilter(formData);
-      console.log('result>>', result?.data?.data);
 
       // Only update state if this request wasn't aborted
       if (!abortControllerRef.current.signal.aborted) {
@@ -139,6 +146,13 @@ export default function SubjectList() {
       }
     }
   };
+
+  useEffect(() => {
+    const urlInstitutionId = getFilterValue('institutionId') || '';
+    if (institutionId !== urlInstitutionId) {
+      setInstitutionId(urlInstitutionId);
+    }
+  }, [prismaFilter]);
 
   // Fetch teachers when prismaFilter changes
   useEffect(() => {
@@ -168,8 +182,20 @@ export default function SubjectList() {
         if (institutionsResult.success) {
           setInstitutions(institutionsResult.data);
         }
-        // Fetch institutions
-        const levelsResult = await getAllLevels();
+      } catch (error) {
+        console.error('Error fetching metadata:', error);
+      }
+    };
+
+    fetchMetadata();
+  }, []);
+
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        // Fetch levels
+        const filters = institutionId ? { where: { institutionId } } : null;
+        const levelsResult = await getAllLevels(filters);
         if (levelsResult.success) {
           setLevels(levelsResult.data);
         }
@@ -179,7 +205,7 @@ export default function SubjectList() {
     };
 
     fetchMetadata();
-  }, []);
+  }, [institutionId]);
 
   // Handle form submission - this is when we apply filters to URL and trigger data fetch
   const handleSubmit = async (e: FormEvent) => {
@@ -427,10 +453,10 @@ export default function SubjectList() {
                       {subject.code}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>{subject.institution_id}</div>
+                      <div>{subject?.institutionName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>{subject.levelId}</div>
+                      <div>{subject?.levelName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {subject.creditHours || 'N/A'}

@@ -47,6 +47,7 @@ abstract class BaseService<T, CreateInput, UpdateInput, M extends IModel<T>, DTO
     transformMethod: keyof DTO = 'toList' as keyof DTO
   ): Promise<{ data: T[]; total: number; page: number; perPage: number; pageCount: number }> {
     // Calculate skip value based on page number and items per page
+    const { include, ...filtersWithoutInclude } = filters;
     const skip = (page - 1) * perPage;
 
     // Add pagination to filters
@@ -56,11 +57,13 @@ abstract class BaseService<T, CreateInput, UpdateInput, M extends IModel<T>, DTO
       take: perPage,
     };
 
+    // const countFilters =
+
     // Fetch data with pagination
     const data = await this.model.findMany(paginatedFilters);
 
     // Get total count for pagination metadata
-    const total = await this.model.count(filters);
+    const total = await this.model.count(filtersWithoutInclude);
 
     // Calculate total pages
     const pageCount = Math.ceil(total / perPage);

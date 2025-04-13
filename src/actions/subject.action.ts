@@ -1,8 +1,9 @@
 'use server';
 
-import SubjectService from '@/services/subject.service';
-import BaseServerAction from './base.action';
+import { subjectFilterConfig } from '@/app/SubjectList';
 import { SubjectFormValues, subjectSchema } from '@/schemas/subject';
+import SubjectService from '@/services/subject.service';
+import { filterConfig } from '@/utils/default-value';
 import { Prisma, Subject } from '@prisma/client';
 import { z } from 'zod';
 import {
@@ -10,19 +11,22 @@ import {
   RelationalServerAction,
   RelationFieldMapping,
 } from './relation.action';
-import { filterConfig } from '@/utils/default-value';
 
 const subjectRelationMapping: RelationFieldMapping = {
-  institutionId: { relation: 'institution', field: 'name' },
-  levelId: { relation: 'level', field: 'name' },
+  // institutionName: { relation: 'institution', field: 'name' },
 };
 
 const subjectRelationalConfig: RelationalFilterConfig = {
   defaultPageSize: filterConfig.defaultPageSize,
   defaultSort: filterConfig.defaultSort,
   fields: {
-    name: { type: 'string', defaultOperator: 'contains', urlParam: 'search' },
+    ...subjectFilterConfig.fields,
   },
+  include: {
+    institution: true,
+    level: true,
+  },
+  relationMappings: subjectRelationMapping,
 };
 
 class SubjectServerAction extends RelationalServerAction<
@@ -34,11 +38,9 @@ class SubjectServerAction extends RelationalServerAction<
 > {
   constructor(
     schema: z.ZodType<SubjectFormValues> = subjectSchema,
-    service: SubjectService = new SubjectService(),
-    relationalConfig: RelationalFilterConfig = subjectRelationalConfig,
-    relationMapping: RelationFieldMapping = subjectRelationMapping
+    service: SubjectService = new SubjectService()
   ) {
-    super(schema, service, relationalConfig, relationMapping);
+    super(schema, service, subjectRelationalConfig, subjectRelationMapping);
   }
 }
 

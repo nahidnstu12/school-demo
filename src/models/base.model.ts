@@ -42,8 +42,6 @@ abstract class BaseModel<T> implements IModel<T> {
     const defaultFilters = { where: { deleted: { not: true } } } as any;
     const mergedFilters = this.mergeFilters(defaultFilters, filters);
 
-    console.log(JSON.stringify(mergedFilters, null, 2));
-
     return await (this.model as any).findMany(mergedFilters);
   }
 

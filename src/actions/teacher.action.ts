@@ -13,9 +13,10 @@ import {
 } from './relation.action';
 
 // Define a mapping for relation fields
+// filter and sorting when nesting relation field
 const teacherRelationMapping: RelationFieldMapping = {
   // User relation fields
-  fullName: { relation: 'user', field: 'firstName', type: 'sort' }, // For sorting by name
+  fullName: { relation: 'user', field: 'firstName' }, // For sorting by name
   email: { relation: 'user', field: 'email' },
   phone: { relation: 'user', field: 'phone' },
   firstName: { relation: 'user', field: 'firstName' },

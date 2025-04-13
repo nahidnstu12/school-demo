@@ -15,7 +15,7 @@ export default async function HomePage() {
     <>
       {/* <LevelForm institutions={institutions} /> <UserRegistrationForm /> */}
       {/* <ProductList /> */}
-      {/* <TeacherList /> */}
+
       <SubjectList />
     </>
   );

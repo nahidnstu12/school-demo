@@ -3,6 +3,7 @@ import { ActionResult } from './IServerAction';
 import BaseServerAction from './base.action';
 import { IService } from '@/services/IService';
 import { headers } from 'next/headers';
+import { FilterFieldConfig } from '@/utils/filter-helpers';
 
 /**
  * Interface for relation field mapping
@@ -11,8 +12,8 @@ export interface RelationFieldMapping {
   [key: string]: {
     relation: string;
     field: string;
-    type?: 'filter' | 'sort' | 'both';
-    nestedRelation?: string;
+    type?: 'filter' | 'sort' | 'both'; //maybe not required
+    nestedRelation?: string; //maybe require for recursive nesting options
   };
 }
 
@@ -24,7 +25,7 @@ export interface RelationalFilterConfig {
   defaultSort?: { field: string; direction: 'asc' | 'desc' };
   fields: {
     [key: string]: {
-      type: 'string' | 'number' | 'boolean' | 'date';
+      type: FilterFieldConfig['type'];
       defaultOperator?: string;
       urlParam?: string;
       relation?: string; // Optional relation name
@@ -32,6 +33,7 @@ export interface RelationalFilterConfig {
     };
   };
   relationMappings?: RelationFieldMapping;
+  include?: Record<string, boolean>;
   searchFields?: Array<{
     field: string;
     relation?: string;
@@ -104,6 +106,7 @@ export abstract class RelationalServerAction<
           // Ensure pagination settings use URL values
           filterObject.skip = (page - 1) * pageSize;
           filterObject.take = pageSize;
+          if (this.filterConfig.include) filterObject.include = this.filterConfig.include;
 
           // Process the filter object to handle special fields and relations
           this.processFilterObject(filterObject);

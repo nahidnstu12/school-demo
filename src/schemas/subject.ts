@@ -40,11 +40,3 @@ export type SubjectFormValues = z.infer<typeof subjectSchema>;
 export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
 export type UpdateSubjectInput = z.infer<typeof updateSubjectSchema>;
 export type SubjectFilterInput = z.infer<typeof subjectFilterSchema>;
-
-// Filter configuration
-export const subjectFilterConfig = {
-  defaultPageSize: 10,
-  filterableFields: ['institutionId', 'levelId', 'name', 'code', 'status'],
-  sortableFields: ['name', 'code', 'createdAt'],
-  searchableFields: ['name', 'code', 'description'],
-};
