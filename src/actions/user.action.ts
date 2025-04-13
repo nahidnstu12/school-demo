@@ -2,7 +2,7 @@
 
 import UserService from '@/services/user.service';
 import BaseServerAction from './base.action';
-import { userSchema } from '@/schemas/user';
+import { UserFormValues, userSchema } from '@/schemas/user';
 import { Prisma, User, UserRole } from '@prisma/client';
 import { z } from 'zod';
 
@@ -10,15 +10,17 @@ import { z } from 'zod';
  * Server actions for User entity
  */
 class UserServerAction extends BaseServerAction<
-  z.infer<typeof userSchema>,
+  UserFormValues,
   Prisma.UserCreateInput,
   Prisma.UserUpdateInput,
   User,
   UserService
 > {
-  constructor() {
-    // Create a new UserService instance and pass it to the base class
-    super(userSchema, new UserService());
+  constructor(
+    schema: z.ZodType<UserFormValues> = userSchema,
+    service: UserService = new UserService()
+  ) {
+    super(schema, service);
   }
 
   // You can add user-specific methods here if needed

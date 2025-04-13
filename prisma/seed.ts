@@ -1,5 +1,7 @@
 import { PrismaClient, UserRole, NoticeType } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
+import { mockproducts, mockTeachers } from './fakerData';
 
 const prisma = new PrismaClient();
 
@@ -34,47 +36,100 @@ async function main() {
     prisma.routineSlot.deleteMany(),
     prisma.routine.deleteMany(),
     prisma.subjectTeacher.deleteMany(),
+    prisma.teacherAssign.deleteMany(),
     prisma.subject.deleteMany(),
+    prisma.student.deleteMany(),
     prisma.section.deleteMany(),
     prisma.group.deleteMany(),
     prisma.shift.deleteMany(),
-    prisma.student.deleteMany(),
+    prisma.level.deleteMany(),
     prisma.teacher.deleteMany(),
     prisma.staff.deleteMany(),
-    prisma.level.deleteMany(),
-    prisma.user.deleteMany(),
     prisma.institution.deleteMany(),
+    prisma.user.deleteMany(),
+    prisma.image.deleteMany(),
   ]);
   console.log('Existing data cleared.');
 
-  // Create Institutions
-  console.log('Creating institutions...');
-  const institutions = await Promise.all(
-    Array.from({ length: 2 }).map(async (_, index) => {
-      return prisma.institution.create({
+  // Create Images for profile pictures and institution logos
+  console.log('Creating sample images...');
+  const images = await Promise.all(
+    Array.from({ length: 5 }).map(async (_, index) => {
+      return prisma.image.create({
         data: {
-          name: `Institution ${index + 1}`,
-          address: `Address ${index + 1}`,
-          contactNumber: `+1234567890${index}`,
-          email: `institution${index + 1}@example.com`,
+          path: `/uploads/images/image${index + 1}.jpg`,
+          filename: `image${index + 1}.jpg`,
+          mimetype: 'image/jpeg',
+          size: Math.floor(Math.random() * 1000000) + 100000,
+          ownerId: "",
+          ownerType: "Product"
         },
       });
     })
   );
-  console.log('Institutions created:', institutions);
+  console.log('Sample images created:', images.length);
 
-  for (const institution of institutions) {
+  // Create Admin User
+  console.log('Creating admin user...');
+  const adminUser = await prisma.user.create({
+    data: {
+      firstName: 'Admin',
+      lastName: 'User',
+      email: 'admin@example.com',
+      password: await hash('password123', 12),
+      role: UserRole.ADMIN,
+      phone: '+1234567890',
+      status: true,
+    },
+  });
+  console.log('Admin user created:', adminUser.email);
+
+  // Create 10 Institutions
+  console.log('Creating 10 institutions...');
+  const institutions = await Promise.all(
+    Array.from({ length: 10 }).map(async (_, index) => {
+      return prisma.institution.create({
+        data: {
+          userId: adminUser.id,
+          uuid: uuidv4(),
+          name: `Institution ${index + 1}`,
+          location: `Address ${index + 1}`,
+          contactNumber: `+1234567890${index}`,
+          address: `Street ${index + 1}, City`,
+          type: 'PRIMARY_SCHOOL',
+          logo: images[0].id,
+          coverPhoto: images[1].id,
+          status: true,
+          extraInfos: { details: "Additional information" },
+        },
+      });
+    })
+  );
+  console.log('Institutions created:', institutions.length);
+
+  // Process each institution
+  for (let instIndex = 0; instIndex < institutions.length; instIndex++) {
+    const institution = institutions[instIndex];
     console.log(`Seeding data for Institution: ${institution.name}`);
 
-    // Create Teachers
-    console.log('Creating teachers...');
+    // Calculate the slice of teachers for this institution (50 per institution)
+    const startIndex = instIndex * 50;
+    const endIndex = startIndex + 50;
+    const institutionTeachers = mockTeachers.slice(startIndex, endIndex);
+
+    // Create Teachers using the mock data
+    console.log('Creating 50 teachers...');
     const teachers = await Promise.all(
-      Array.from({ length: 3 }).map(async (_, index) => {
+      institutionTeachers.map(async (teacherData) => {
         const user = await prisma.user.create({
           data: {
-            email: `teacher${index + 1}_${institution.id}@example.com`,
+            firstName: teacherData.firstName,
+            lastName: teacherData.lastName,
+            email: teacherData.email,
             password: await hash('password123', 12),
             role: UserRole.TEACHER,
+            phone: teacherData.phone,
+            status: true,
           },
         });
 
@@ -82,220 +137,261 @@ async function main() {
           data: {
             userId: user.id,
             institutionId: institution.id,
-            name: `Teacher ${index + 1}`,
-            specialization: `Subject ${index + 1}`,
-            joiningDate: randomDate(new Date('2020-01-01'), new Date()),
+            designation: teacherData.designation,
+            specialization: teacherData.specialization,
+            joiningDate: new Date(teacherData.joiningDate),
+            address: teacherData.address,
+            district: teacherData.district,
+            status: teacherData.status,
+            // extraInfos: {
+            //   education: teacherData.education,
+            //   certifications: teacherData.certifications,
+            //   yearsOfExperience: teacherData.yearsOfExperience
+            // }
           },
         });
       })
     );
-    console.log('Teachers created:', teachers);
+    console.log('Teachers created:', teachers.length);
 
-    // Create Levels
-    console.log('Creating levels...');
+    // Create 5 Levels per institution
+    console.log('Creating 5 levels...');
     const levels = await Promise.all(
-      Array.from({ length: 3 }).map(async (_, index) => {
+      Array.from({ length: 5 }).map(async (_, index) => {
         const level = await prisma.level.create({
           data: {
             institutionId: institution.id,
             name: `Level ${index + 1}`,
             hasShift: index % 2 === 0,
-            hasGroup: index % 2 === 0,
-            hasSection: index % 2 === 0,
+            hasGroup: true, // All levels have groups
+            hasSection: true,
+            status: true,
           },
         });
 
         console.log(`Level created: ${level.name}`);
-
-        // Create Shifts, Groups, and Sections if enabled
-        if (level.hasShift) {
-          console.log('Creating shifts...');
-          await Promise.all(
-            ['Morning', 'Evening'].map((shiftName) =>
-              prisma.shift.create({
-                data: {
-                  levelId: level.id,
-                  name: shiftName,
-                },
-              })
-            )
-          );
-          console.log('Shifts created for level:', level.name);
-        }
-
-        if (level.hasGroup) {
-          console.log('Creating groups...');
-          await Promise.all(
-            ['Science', 'Commerce'].map((groupName) =>
-              prisma.group.create({
-                data: {
-                  levelId: level.id,
-                  name: groupName,
-                },
-              })
-            )
-          );
-          console.log('Groups created for level:', level.name);
-        }
-
-        if (level.hasSection) {
-          console.log('Creating sections...');
-          await Promise.all(
-            ['A', 'B', 'C'].map((sectionName) =>
-              prisma.section.create({
-                data: {
-                  levelId: level.id,
-                  name: sectionName,
-                },
-              })
-            )
-          );
-          console.log('Sections created for level:', level.name);
-        }
-
         return level;
       })
     );
-    console.log('Levels created:', levels);
+    console.log('Levels created:', levels.length);
 
-    // Create Subjects for each Level
-    console.log('Creating subjects...');
-    const subjects = await Promise.all(
-      levels.flatMap((level) =>
-        Array.from({ length: 4 }).map((_, index) =>
-          prisma.subject.create({
+    // Create 2 Groups for each Level
+    console.log('Creating 2 groups per level...');
+    const groups = await Promise.all(
+      levels.flatMap(level => 
+        ['Science', 'Arts'].map(groupName => 
+          prisma.group.create({
             data: {
-              institutionId: institution.id,
               levelId: level.id,
-              name: `Subject ${index + 1}`,
-              code: `SUB${level.id}${index + 1}`,
-              creditHours: Math.floor(Math.random() * 2) + 2,
+              name: groupName,
+              status: true,
             },
           })
         )
       )
     );
-    console.log('Subjects created:', subjects);
+    console.log('Groups created:', groups.length);
 
-    // Assign Teachers to Subjects
-    console.log('Assigning teachers to subjects...');
-    await Promise.all(
-      subjects.map((subject) =>
-        Promise.all(
-          getRandomItems(teachers, 1, 3).map((teacher) =>
-            prisma.subjectTeacher.create({
-              data: {
-                subjectId: subject.id,
-                teacherId: teacher.id,
-              },
-            })
-          )
+    // Create Sections for each Level
+    console.log('Creating sections...');
+    const sections = await Promise.all(
+      levels.flatMap(level => 
+        ['A', 'B'].map(sectionName => 
+          prisma.section.create({
+            data: {
+              levelId: level.id,
+              name: sectionName,
+              groupId: getRandomItem(groups.filter(g => g.levelId === level.id))?.id,
+              status: true,
+            },
+          })
         )
       )
     );
-    console.log('Teachers assigned to subjects.');
+    console.log('Sections created:', sections.length);
 
-    // Create Students
-    console.log('Creating students...');
-    const students = await Promise.all(
-      levels.flatMap((level) =>
-        Array.from({ length: 5 }).map(async (_, index) => {
-          const user = await prisma.user.create({
+    // Create Subjects for each Level
+    console.log('Creating subjects...');
+    const subjects = await Promise.all(
+      levels.flatMap((level, levelIndex) =>
+        Array.from({ length: 6 }).map((_, index) => {
+          // Create a unique code using institution ID, level index, and subject index
+          const uniqueCode = `SUB-${institution.id.substring(0, 3)}-L${levelIndex + 1}-S${index + 1}`;
+          
+          return prisma.subject.create({
             data: {
-              email: `student${index + 1}_${level.id}@example.com`,
-              password: await hash('password123', 12),
-              role: UserRole.STUDENT,
-            },
-          });
-
-          return prisma.student.create({
-            data: {
-              userId: user.id,
               institutionId: institution.id,
               levelId: level.id,
-              name: `Student ${index + 1}`,
-              rollNumber: `${level.id}${String(index + 1).padStart(3, '0')}`,
-              joiningDate: randomDate(new Date('2020-01-01'), new Date()),
+              name: `Subject ${index + 1} for ${level.name}`,
+              code: uniqueCode,
+              creditHours: Math.floor(Math.random() * 2) + 2,
+              description: `Description for Subject ${index + 1}`,
+              status: true,
             },
           });
         })
       )
     );
-    console.log('Students created:', students);
+    console.log('Subjects created:', subjects.length);
 
-    // Create Staff
-    console.log('Creating staff...');
-    await Promise.all(
-      Array.from({ length: 3 }).map(async (_, index) => {
+    // Assign Teachers to Subjects (SubjectTeacher)
+    console.log('Assigning teachers to subjects (SubjectTeacher)...');
+    const subjectTeachers = await Promise.all(
+      subjects.map((subject) =>
+        getRandomItems(teachers, 1, 3).map((teacher) =>
+          prisma.subjectTeacher.create({
+            data: {
+              subjectId: subject.id,
+              teacherId: teacher.id,
+            },
+          })
+        )
+      ).flat()
+    );
+    console.log('SubjectTeacher relationships created:', subjectTeachers.length);
+
+    // Create 10 Students per institution
+    console.log('Creating 10 students...');
+    const students = await Promise.all(
+      Array.from({ length: 10 }).map(async (_, index) => {
+        const level = getRandomItem(levels);
+        const levelSections = sections.filter(section => section.levelId === level.id);
+        const levelGroups = groups.filter(group => group.levelId === level.id);
+        
         const user = await prisma.user.create({
           data: {
-            email: `staff${index + 1}_${institution.id}@example.com`,
+            firstName: `Student`,
+            lastName: `${index + 1}-Inst${instIndex + 1}`,
+            email: `student${index + 1}_inst${instIndex + 1}@example.com`,
             password: await hash('password123', 12),
-            role: UserRole.STAFF,
+            role: UserRole.STUDENT,
+            phone: `+1555${String(index).padStart(4, '0')}`,
+            status: true,
           },
         });
 
-        return prisma.staff.create({
+        return prisma.student.create({
           data: {
             userId: user.id,
             institutionId: institution.id,
-            name: `Staff ${index + 1}`,
-            designation: `Designation ${index + 1}`,
+            levelId: level.id,
+            sectionId: levelSections.length > 0 ? getRandomItem(levelSections).id : null,
+            groupId: levelGroups.length > 0 ? getRandomItem(levelGroups).id : null,
+            rollNo: `${level.id.substring(0, 3)}-S${index + 1}`,
+            address: `Student Address ${index + 1}, Institution ${instIndex + 1}`,
             joiningDate: randomDate(new Date('2020-01-01'), new Date()),
+            status: true,
+            extraInfos: { 
+              parentName: `Parent ${index + 1}`,
+              parentContact: `+1999${String(index).padStart(4, '0')}`,
+            },
           },
         });
       })
     );
-    console.log('Staff created.');
+    console.log('Students created:', students.length);
 
-    // Create Routines for each Level
-    console.log('Creating routines...');
-    const routines = await Promise.all(
-      levels.map((level) =>
-        prisma.routine.create({
-          data: {
-            levelId: level.id,
-            semester: '2024-1',
-            startDate: new Date('2024-01-01'),
-            endDate: new Date('2024-06-30'),
-          },
-        })
-      )
-    );
-    console.log('Routines created:', routines);
-
-    // Create Routine Slots
-    console.log('Creating routine slots...');
+    // Create basic assignments, attendance records, and exam results
+    // We'll keep this minimal since we're focusing on teachers
+    console.log('Creating basic assignments and exam records...');
     await Promise.all(
-      routines.flatMap((routine) =>
-        Array.from({ length: 5 }).flatMap((_, dayIndex) =>
-          subjects
-            .filter((subject) => subject.levelId === routine.levelId)
-            .map((subject) => {
-              const teacher = getRandomItem(teachers);
-              return prisma.routineSlot.create({
-                data: {
-                  routineId: routine.id,
-                  subjectId: subject.id,
-                  teacherId: teacher.id,
-                  dayOfWeek: dayIndex + 1,
-                  startTime: new Date(`2024-01-01T09:${String(dayIndex * 2).padStart(2, '0')}:00`),
-                  endTime: new Date(`2024-01-01T10:${String(dayIndex * 2).padStart(2, '0')}:00`),
-                },
-              });
-            })
-        )
-      )
+      subjects.slice(0, 3).flatMap((subject) => {
+        return prisma.assignment.create({
+          data: {
+            subjectId: subject.id,
+            title: `Assignment for ${subject.name}`,
+            description: `Complete the following tasks...`,
+            dueDate: randomDate(new Date('2024-01-15'), new Date('2024-05-30')),
+            totalMarks: 50,
+          },
+        });
+      })
     );
-    console.log('Routine slots created.');
 
-    // Further seeding for assignments, exam results, notices, etc...
-    console.log('Seeding completed for Institution:', institution.name);
+    console.log('Institution seeding completed:', institution.name);
   }
 
+  // Keep the rest of your seeding logic for products
+  console.log('Creating categories...');
+  const categoriesData = [
+    { id: uuidv4(), name: 'Electronics' },
+    { id: uuidv4(), name: 'Books' },
+    { id: uuidv4(), name: 'Clothing' },
+    { id: uuidv4(), name: 'Home & Kitchen' },
+    { id: uuidv4(), name: 'Sports & Outdoors' },
+    { id: uuidv4(), name: 'Beauty & Personal Care' },
+    { id: uuidv4(), name: 'Toys & Games' },
+    { id: uuidv4(), name: 'Health & Wellness' }
+  ];
+
+  // Insert categories with predefined IDs
+  for (const category of categoriesData) {
+    await prisma.category.upsert({
+      where: { name: category.name },
+      update: {},
+      create: {
+        id: category.id,
+        name: category.name
+      }
+    });
+  }
+  console.log(`Categories created: ${categoriesData.length}`);
+
+  // Create a category mapping using the predefined IDs
+  const categoryMap = categoriesData.reduce((map, category) => {
+    map[category.name] = category.id;
+    return map;
+  }, {} as Record<string, string>);
+
+  // Create products
+  for (const product of mockproducts) {
+    const categoryId = categoryMap[product.category];
+
+    if (!categoryId) {
+      console.warn(`Category not found: ${product.category}`);
+      continue;
+    }
+
+    // Create product
+    const createdProduct = await prisma.product.upsert({
+      where: { sku: product.sku },
+      update: {},
+      create: {
+        id: uuidv4(),
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        category: product.category,
+        categoryId: categoryId,
+        stock: product.stock,
+        sku: product.sku,
+        featured: product.featured,
+        tags: product.tags,
+        deleted: false
+      }
+    });
+
+    // Create images for the product
+    if (product.images && product.images.length > 0) {
+      for (const image of product.images) {
+        await prisma.image.create({
+          data: {
+            id: uuidv4(),
+            path: `/images/products/${image.filename}`,
+            filename: image.filename,
+            mimetype: image.mimetype,
+            size: image.size,
+            ownerId: createdProduct.id,
+            ownerType: 'Product'
+          }
+        });
+      }
+    }
+  }
+
+  console.log('Products and images seeded');
   console.log('Seeding completed.');
 }
-
 
 main()
   .catch((e) => {

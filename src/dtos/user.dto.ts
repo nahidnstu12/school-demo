@@ -1,7 +1,9 @@
 'use server';
 
+import { User } from '@prisma/client';
+
 class UserDTO {
-  static toProfile(user: any) {
+  static toProfile(user: User) {
     return {
       id: user.id,
       email: user.email,
@@ -11,7 +13,7 @@ class UserDTO {
     };
   }
 
-  static toList(user: any) {
+  static toList(user: User) {
     return {
       id: user.id,
       email: user.email,

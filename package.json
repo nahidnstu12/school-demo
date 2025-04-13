@@ -7,8 +7,10 @@
     "dev": "next dev --turbopack -p 3015",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "prepare": "husky"
+    "prepare": "husky install",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix --max-warnings=100",
+    "format": "prettier --write ."
   },
   "prisma": {
     "seed": "bun prisma/seed.ts"

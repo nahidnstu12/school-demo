@@ -1,7 +1,4 @@
 module.exports = {
-  '**/src/**/*.{js,jsx,ts,tsx}': [
-  'prettier --write',
-  'eslint --fix --max-warnings=100'
-],
-  '*.{json,css,scss,md}': ['prettier --write'],
+  '**/src/**/*.{js,jsx,ts,tsx}': ['bun run lint:fix', 'bun run format'],
+  '*.{json,css,scss,md,yml,yaml}': ['prettier --write'],
 };

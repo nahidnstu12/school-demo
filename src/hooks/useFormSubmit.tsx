@@ -35,6 +35,7 @@ export function useFormSubmit<T extends Record<string, any>, R = any>({
     setIsSubmitting(true);
     setServerErrors([]);
     setSuccessMsg(null);
+    console.log('formSubmit>', data);
 
     try {
       // Convert form data to FormData for server action

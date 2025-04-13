@@ -1,20 +1,23 @@
 'use server';
 
-import InstitutionService from '@/services/institution.service';
-import BaseServerAction from './base.action';
 import { Institution, Prisma } from '@prisma/client';
 import { z } from 'zod';
-import { institutionSchema } from '@/schemas/institution';
+import { InstitutionFormValues, institutionSchema } from '@/schemas/institution';
+import BaseServerAction from './base.action';
+import InstitutionService from '@/services/institution.service';
 
 class InstitutionServerAction extends BaseServerAction<
-  z.infer<typeof institutionSchema>,
+  InstitutionFormValues,
   Prisma.InstitutionCreateInput,
   Prisma.InstitutionUpdateInput,
   Institution,
   InstitutionService
 > {
-  constructor() {
-    super(institutionSchema, new InstitutionService());
+  constructor(
+    schema: z.ZodType<InstitutionFormValues> = institutionSchema,
+    service: InstitutionService = new InstitutionService()
+  ) {
+    super(schema, service);
   }
 }
 const InstitutionActionInstance = new InstitutionServerAction();

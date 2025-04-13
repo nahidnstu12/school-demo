@@ -7,38 +7,64 @@ We follow the Conventional Commits specification for commit messages. This enabl
 ### Commit Message Format
 
 ```
-<type>(<scope>): <description>
-
-[optional body]
+<type>(<scope>): <short description>
 ```
 
-### Types
+## Commit Types
 
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, missing semi-colons, etc)
-- `refactor`: Code refactoring
-- `perf`: Performance improvements
-- `test`: Adding or updating tests
-- `chore`: Updating build tasks, package manager configs, etc
+| Type         | Description              | Example Message                |
+| ------------ | ------------------------ | ------------------------------ |
+| `feat`       | New feature              | `feat(auth): add Google login` |
+| `fix`        | Bug fix                  | `fix(api): fix null reference` |
+| `docs`       | Documentation changes    | `docs: update setup guide`     |
+| `style`      | Code formatting          | `style: format with prettier`  |
+| `refactor`   | Code restructuring       | `refactor: payment service`    |
+| `perf`       | Performance improvements | `perf: optimize DB query`      |
+| `test`       | Test changes             | `test: add auth tests`         |
+| `chore`      | Maintenance tasks        | `chore: update dependencies`   |
+| `ci`         | CI/CD changes            | `ci: add test workflow`        |
+| `build`      | Build system changes     | `build: upgrade webpack`       |
+| `revert`     | Revert commit            | `revert: fix auth middleware`  |
+| `security`   | Security changes         | `security: fix JWT validation` |
+| `hotfix`     | Critical fixes           | `hotfix: payment duplicates`   |
+| `wip`        | Work in progress         | `wip: new dashboard`           |
+| `experiment` | Experimental features    | `experiment: AI suggestions`   |
+| `merge`      | Merge branches           | `merge: user-profile feature`  |
 
-### Scope
+## Common Scopes
 
-The scope provides additional contextual information:
+| Scope           | Description             | Example                      |
+| --------------- | ----------------------- | ---------------------------- |
+| `auth`          | Authentication          | `feat(auth): password reset` |
+| `api`           | API endpoints           | `fix(api): student endpoint` |
+| `ui`            | User Interface          | `style(ui): button spacing`  |
+| `db`            | Database                | `perf(db): add index`        |
+| `config`        | Configuration           | `chore(config): update env`  |
+| `deps`          | Dependencies            | `chore(deps): update lodash` |
+| `ci`            | CI Pipeline             | `ci: e2e tests`              |
+| `validation`    | Data validation         | `fix(validation): passwords` |
+| `i18n`          | Internationalization    | `feat(i18n): French`         |
+| `analytics`     | Tracking                | `feat(analytics): Mixpanel`  |
+| `middleware`    | Application middleware  | `refactor(middleware): logs` |
+| `logging`       | Logging systems         | `feat(logging): add IDs`     |
+| `storage`       | File storage            | `fix(storage): large files`  |
+| `caching`       | Caching systems         | `perf(caching): Redis`       |
+| `queue`         | Message queues          | `feat(queue): dead letters`  |
+| `search`        | Search functionality    | `perf(search): queries`      |
+| `payment`       | Payment processing      | `fix(payment): declined`     |
+| `notification`  | Notifications           | `feat(notification): SMS`    |
+| `migration`     | Data migrations         | `chore(migration): schema`   |
+| `monitoring`    | Monitoring              | `feat(monitoring): metrics`  |
+| `docker`        | Docker/containers       | `chore(docker): image size`  |
+| `seo`           | Search optimization     | `feat(seo): markup`          |
+| `accessibility` | Accessibility           | `fix(accessibility): a11y`   |
+| `graphql`       | GraphQL API             | `refactor(graphql): schema`  |
+| `websocket`     | Real-time functionality | `feat(websocket): presence`  |
 
-- `auth`: Authentication related changes
-- `api`: API related changes
-- `ui`: UI components
-- `deps`: Dependencies
-- `config`: Configuration changes
-
-### Examples
+### Commit Examples
 
 ```
-feat(auth): implement JWT authentication
-fix(api): resolve user data fetch error
-docs(readme): update installation instructions
+fix(api): handle null values in student serializer
 ```
 
 ## Pull Request Template
