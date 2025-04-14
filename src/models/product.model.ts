@@ -112,10 +112,7 @@ class ProductModel extends BaseModel<Product> {
   async search(query: string): Promise<Product[]> {
     return this.findMany({
       where: {
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } },
-        ],
+        OR: [{ name: { contains: query } }, { description: { contains: query } }],
       },
     });
   }

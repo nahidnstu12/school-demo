@@ -1,24 +1,14 @@
 'use server';
 
-import { subjectFilterConfig } from '@/app/SubjectList';
-import { SubjectFormValues, subjectSchema } from '@/schemas/subject';
+import { subjectFilterConfig, SubjectFormValues, subjectSchema } from '@/schemas/subject';
 import SubjectService from '@/services/subject.service';
-import { filterConfig } from '@/utils/default-value';
 import { Prisma, Subject } from '@prisma/client';
 import { z } from 'zod';
-import {
-  RelationalFilterConfig,
-  RelationalServerAction,
-  RelationFieldMapping,
-} from './relation.action';
-
-const subjectRelationMapping: RelationFieldMapping = {
-  // institutionName: { relation: 'institution', field: 'name' },
-};
+import { RelationalFilterConfig, RelationalServerAction } from './relation.action';
 
 const subjectRelationalConfig: RelationalFilterConfig = {
-  defaultPageSize: filterConfig.defaultPageSize,
-  defaultSort: filterConfig.defaultSort,
+  defaultPageSize: subjectFilterConfig.defaultPageSize,
+  defaultSort: subjectFilterConfig.defaultSort,
   fields: {
     ...subjectFilterConfig.fields,
   },
@@ -26,7 +16,6 @@ const subjectRelationalConfig: RelationalFilterConfig = {
     institution: true,
     level: true,
   },
-  relationMappings: subjectRelationMapping,
 };
 
 class SubjectServerAction extends RelationalServerAction<
@@ -40,7 +29,7 @@ class SubjectServerAction extends RelationalServerAction<
     schema: z.ZodType<SubjectFormValues> = subjectSchema,
     service: SubjectService = new SubjectService()
   ) {
-    super(schema, service, subjectRelationalConfig, subjectRelationMapping);
+    super(schema, service, subjectRelationalConfig);
   }
 }
 
@@ -62,10 +51,6 @@ export async function deleteSubject(id: string | number) {
 
 export async function getSubjectById(id: string | number) {
   return subjectActionInstance.getById(id);
-}
-
-export async function getAllSubjects(filters?: Prisma.SubjectFindManyArgs) {
-  return subjectActionInstance.getAll(filters);
 }
 
 export async function getSubjectsWithFilter(formData: FormData) {

@@ -41,6 +41,7 @@ abstract class BaseModel<T> implements IModel<T> {
     // Default implementation with soft delete filtering
     const defaultFilters = { where: { deleted: { not: true } } } as any;
     const mergedFilters = this.mergeFilters(defaultFilters, filters);
+    console.log('findMany filters>>', JSON.stringify(mergedFilters, null, 2));
 
     return await (this.model as any).findMany(mergedFilters);
   }
@@ -117,17 +118,18 @@ abstract class BaseModel<T> implements IModel<T> {
 
     // Copy pagination options
     if (customFilters.skip !== undefined) result.skip = customFilters.skip;
+
     if (customFilters.take !== undefined) result.take = customFilters.take;
+
     if (customFilters.cursor) result.cursor = customFilters.cursor;
 
-    // Copy ordering options
     if (customFilters.orderBy) result.orderBy = customFilters.orderBy;
 
-    // Copy relation includes
     if (customFilters.include) result.include = customFilters.include;
 
-    // Copy relation selects
     if (customFilters.select) result.select = customFilters.select;
+
+    if (customFilters.distinct) result.distinct = customFilters.distinct;
 
     return result;
   }

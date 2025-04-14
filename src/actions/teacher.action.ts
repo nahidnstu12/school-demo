@@ -6,25 +6,7 @@ import TeacherService from '@/services/teacher.service';
 import { teacherFilterConfig } from '@/schemas/teacher';
 import InstitutionService from '@/services/institution.service';
 import { ActionResult } from './IServerAction';
-import {
-  RelationalServerAction,
-  RelationFieldMapping,
-  RelationalFilterConfig,
-} from './relation.action';
-
-// Define a mapping for relation fields
-// filter and sorting when nesting relation field
-const teacherRelationMapping: RelationFieldMapping = {
-  // User relation fields
-  fullName: { relation: 'user', field: 'firstName' }, // For sorting by name
-  email: { relation: 'user', field: 'email' },
-  phone: { relation: 'user', field: 'phone' },
-  firstName: { relation: 'user', field: 'firstName' },
-  lastName: { relation: 'user', field: 'lastName' },
-
-  // Institution relation fields
-  institutionName: { relation: 'institution', field: 'name' },
-};
+import { RelationalServerAction, RelationalFilterConfig } from './relation.action';
 
 // Convert the teacherFilterConfig to a RelationalFilterConfig
 const teacherRelationalConfig: RelationalFilterConfig = {
@@ -46,15 +28,16 @@ const teacherRelationalConfig: RelationalFilterConfig = {
       relationField: 'phone',
     },
   },
-  relationMappings: teacherRelationMapping,
+  include: {
+    user: true,
+    institution: true,
+  },
   // Define search fields explicitly
   searchFields: [
     { relation: 'user', relationField: 'firstName', field: 'firstName' },
     { relation: 'user', relationField: 'lastName', field: 'lastName' },
     { relation: 'user', relationField: 'email', field: 'email' },
     { relation: 'user', relationField: 'phone', field: 'phone' },
-    // { field: 'pdsId' },
-    // { field: 'designation' },
   ],
 };
 
@@ -72,15 +55,8 @@ class TeacherServerAction extends RelationalServerAction<
     service: TeacherService = new TeacherService(),
     institutionService: InstitutionService = new InstitutionService()
   ) {
-    super(schema, service, teacherRelationalConfig, teacherRelationMapping);
+    super(schema, service, teacherRelationalConfig);
     this.institutionService = institutionService;
-  }
-
-  /**
-   * Get teachers with filtering - Uses the base class implementation
-   */
-  async getTeachersWithFilter(formData: FormData): Promise<ActionResult<any>> {
-    return this.getItemsWithFilter(formData);
   }
 
   /**
@@ -94,18 +70,6 @@ class TeacherServerAction extends RelationalServerAction<
       return this.handleServiceError(error);
     }
   }
-
-  /**
-   * Get all institutions for dropdown
-   */
-  async getInstitutions(): Promise<ActionResult<any[]>> {
-    try {
-      const institutions = await this.institutionService.findAll();
-      return { success: true, data: institutions };
-    } catch (error) {
-      return this.handleServiceError(error);
-    }
-  }
 }
 
 // Create singleton instance
@@ -113,13 +77,9 @@ const TeacherActionInstance = new TeacherServerAction();
 
 // Export reusable functions
 export async function getTeachersWithFilter(formData: FormData) {
-  return TeacherActionInstance.getTeachersWithFilter(formData);
+  return TeacherActionInstance.getItemsWithFilter(formData);
 }
 
 export async function getTeacherDesignations() {
   return TeacherActionInstance.getTeacherDesignations();
-}
-
-export async function getInstitutions() {
-  return TeacherActionInstance.getInstitutions();
 }

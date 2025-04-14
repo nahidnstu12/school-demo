@@ -4,6 +4,7 @@ import { getAllInstitutions } from '@/actions/institution.action';
 import { getAllLevels } from '@/actions/level.action';
 import { getSubjectsWithFilter } from '@/actions/subject.action';
 import { useDynamicFilters } from '@/hooks/useDynamicFilter';
+import { subjectFilterConfig } from '@/schemas/subject';
 import { FilterConfig } from '@/utils/filter-helpers';
 import { Institution, Level } from '@prisma/client';
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
@@ -19,16 +20,6 @@ interface Subject {
   levelName?: string;
 }
 
-export const subjectFilterConfig: FilterConfig = {
-  defaultPageSize: 10,
-  defaultSort: { field: 'createdAt', direction: 'desc' as const },
-  fields: {
-    name: { type: 'string', defaultOperator: 'contains' },
-    institutionId: { type: 'string', defaultOperator: 'equals' },
-    levelId: { type: 'string', defaultOperator: 'equals' },
-    status: { type: 'boolean', defaultOperator: 'equals' },
-  },
-};
 export default function SubjectList() {
   const {
     prismaFilter,
@@ -90,7 +81,7 @@ export default function SubjectList() {
     ? `${Object.keys(typedPrismaFilter.orderBy)[0]}:${Object.values(typedPrismaFilter.orderBy)[0]}`
     : 'name:desc';
 
-  // Function to fetch teachers based on current filters
+  // Function to fetch subjects based on current filters
   const fetchSubjects = async () => {
     // Abort any ongoing fetch
     if (abortControllerRef.current) {
@@ -108,7 +99,7 @@ export default function SubjectList() {
       const urlString = currentUrl.search;
 
       // Skip if URL hasn't changed
-      if (urlString === lastFetchUrlRef.current) {
+      if (urlString === lastFetchUrlRef.current && urlString !== '') {
         console.log('Skipping duplicate fetch for URL:', urlString);
         setLoading(false);
         return;
@@ -121,7 +112,7 @@ export default function SubjectList() {
       const formData = new FormData();
       formData.append('filter', JSON.stringify(prismaFilter));
 
-      console.log('Fetching teachers with filter:', prismaFilter);
+      console.log('Fetching subjects with filter:', prismaFilter);
 
       const result = await getSubjectsWithFilter(formData);
 
@@ -131,13 +122,13 @@ export default function SubjectList() {
           setSubjects(result.data.data);
           setTotal(result.data.total);
         } else {
-          console.error('Error fetching teachers:', result.errors);
+          console.error('Error fetching subjects:', result.errors);
         }
       }
     } catch (error: any) {
       // Only log errors for non-aborted requests
       if (error.name !== 'AbortError') {
-        console.error('Error fetching teachers:', error);
+        console.error('Error fetching subjects:', error);
       }
     } finally {
       // Only update loading state if this request wasn't aborted
@@ -154,7 +145,7 @@ export default function SubjectList() {
     }
   }, [prismaFilter]);
 
-  // Fetch teachers when prismaFilter changes
+  // Fetch subjects when prismaFilter changes
   useEffect(() => {
     if (Object.keys(prismaFilter).length > 0) {
       // Generate a unique ID for this fetch operation
@@ -247,13 +238,13 @@ export default function SubjectList() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Search */}
             <div>
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                 Subject Name
               </label>
               <input
                 type="text"
-                id="search"
-                name="search"
+                id="name"
+                name="name"
                 value={nameValue}
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -382,7 +373,7 @@ export default function SubjectList() {
               <>
                 Showing <span className="font-medium">{total === 0 ? 0 : startItem}</span> to{' '}
                 <span className="font-medium">{endItem}</span> of{' '}
-                <span className="font-medium">{total}</span> teachers
+                <span className="font-medium">{total}</span> subjects
               </>
             )}
           </div>
@@ -404,7 +395,7 @@ export default function SubjectList() {
           </div>
         </div>
 
-        {/* Teacher Table */}
+        {/* subject Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -440,7 +431,7 @@ export default function SubjectList() {
               ) : subjects.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
-                    No teachers found
+                    No subjects found
                   </td>
                 </tr>
               ) : (

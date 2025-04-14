@@ -1,9 +1,8 @@
 'use server';
-import { Level, Prisma } from '@prisma/client';
-import BaseService from './base.service';
-import { prisma } from '@/lib/prisma';
 import LevelDTO from '@/dtos/level.dto';
 import LevelModel from '@/models/level.model';
+import { Level, Prisma } from '@prisma/client';
+import BaseService from './base.service';
 
 class LevelService extends BaseService<
   Level,

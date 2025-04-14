@@ -1,27 +1,31 @@
 'use server';
 
-import { Institution } from '@prisma/client';
+import { Institution, User } from '@prisma/client';
+
+interface IRelations extends Institution {
+  user: User;
+}
 
 class InstitutionDTO {
-  static toProfile(institution: Institution) {
+  static toDetail(institution: IRelations) {
     return {
       id: institution.id,
-      email: institution.email,
+      email: institution?.user?.email,
       name: institution.name,
       address: institution.address,
       contactNumber: institution.contactNumber,
     };
   }
 
-  static toList(institution: Institution) {
+  static toList(institution: IRelations) {
     return {
       id: institution.id,
-      email: institution.email,
+      email: institution?.user?.email,
       name: institution.name,
     };
   }
 
-  static toPublic(institution: Institution) {
+  static toPublic(institution: IRelations) {
     // A public view that excludes sensitive info
     return {
       id: institution.id,

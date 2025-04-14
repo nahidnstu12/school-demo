@@ -7,20 +7,6 @@ interface SubjectWithRelations extends Subject {
 }
 
 class SubjectDTO {
-  constructor(
-    subject: SubjectWithRelations,
-    public id: string = subject.id,
-    public name: string = subject.name,
-    public code: string | null = subject.code,
-    public creditHours: number | null = subject.creditHours ?? null,
-    public description: string | null = subject.description ?? null,
-    public status: boolean = subject.status,
-    public institutionId: string = subject.institutionId,
-    public institutionName: string = subject?.institution?.name,
-    public levelId: string | null = subject.levelId ?? null,
-    public levelName: string | null = subject.level?.name ?? null
-  ) {}
-
   // Static method to create a list version with limited properties
   static toList(subject: SubjectWithRelations): Partial<SubjectDTO> {
     return {

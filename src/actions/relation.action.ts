@@ -5,16 +5,10 @@ import { IService } from '@/services/IService';
 import { headers } from 'next/headers';
 import { FilterFieldConfig } from '@/utils/filter-helpers';
 
-/**
- * Interface for relation field mapping
- */
-export interface RelationFieldMapping {
-  [key: string]: {
-    relation: string;
-    field: string;
-    type?: 'filter' | 'sort' | 'both'; //maybe not required
-    nestedRelation?: string; //maybe require for recursive nesting options
-  };
+export interface RelationalFieldConfig extends FilterFieldConfig {
+  relation?: string; // The related entity name
+  relationField?: string; // The field in the related entity
+  nestedRelation?: string; // For deeper nesting
 }
 
 /**
@@ -23,16 +17,7 @@ export interface RelationFieldMapping {
 export interface RelationalFilterConfig {
   defaultPageSize: number;
   defaultSort?: { field: string; direction: 'asc' | 'desc' };
-  fields: {
-    [key: string]: {
-      type: FilterFieldConfig['type'];
-      defaultOperator?: string;
-      urlParam?: string;
-      relation?: string; // Optional relation name
-      relationField?: string; // Optional relation field
-    };
-  };
-  relationMappings?: RelationFieldMapping;
+  fields: Record<string, RelationalFieldConfig>;
   include?: Record<string, boolean>;
   searchFields?: Array<{
     field: string;
@@ -52,27 +37,12 @@ export abstract class RelationalServerAction<
   S extends IService<ModelType, CreateInput, UpdateInput>,
 > extends BaseServerAction<T, CreateInput, UpdateInput, ModelType, S> {
   protected filterConfig: RelationalFilterConfig;
-  protected relationMappings: RelationFieldMapping;
 
-  constructor(
-    schema: ZodType<T>,
-    service: S,
-    filterConfig: RelationalFilterConfig,
-    relationMappings: RelationFieldMapping = {}
-  ) {
+  constructor(schema: ZodType<T>, service: S, filterConfig: RelationalFilterConfig) {
     super(schema, service);
     this.filterConfig = filterConfig;
-
-    // Combine provided mappings with any from filter config
-    this.relationMappings = {
-      ...relationMappings,
-      ...(filterConfig.relationMappings || {}),
-    };
   }
 
-  /**
-   * Get items with filtering that handles relations properly
-   */
   async getItemsWithFilter(formData: FormData): Promise<ActionResult<any>> {
     try {
       const headersList = await headers();
@@ -150,6 +120,25 @@ export abstract class RelationalServerAction<
   }
 
   /**
+   * Get relation info for a field from field config
+   */
+  protected getRelationInfo(
+    fieldName: string
+  ): { relation: string; field: string; nestedRelation?: string } | null {
+    const fieldConfig = this.filterConfig.fields[fieldName];
+
+    if (fieldConfig && fieldConfig.relation && fieldConfig.relationField) {
+      return {
+        relation: fieldConfig.relation,
+        field: fieldConfig.relationField,
+        nestedRelation: fieldConfig.nestedRelation,
+      };
+    }
+
+    return null;
+  }
+
+  /**
    * Process the sort field to handle relations
    */
   protected processSortField(
@@ -157,8 +146,8 @@ export abstract class RelationalServerAction<
     sortField: string,
     sortDirection: 'asc' | 'desc'
   ): void {
-    // Check if this is a relation field that needs special handling
-    const relationInfo = this.relationMappings[sortField];
+    // Get relation info from field config
+    const relationInfo = this.getRelationInfo(sortField);
 
     if (relationInfo) {
       if (relationInfo.nestedRelation) {
@@ -207,8 +196,9 @@ export abstract class RelationalServerAction<
           return;
         }
 
-        // Handle relation fields using the mapping
-        const relationInfo = this.relationMappings[key];
+        // Handle relation fields using relation info from field config
+        const relationInfo = this.getRelationInfo(key);
+
         if (relationInfo) {
           if (relationInfo.nestedRelation) {
             // For nested relations
@@ -228,17 +218,8 @@ export abstract class RelationalServerAction<
           // Skip search - handled separately
           return;
         } else {
-          // Check in filter config if this is a relation field
-          const fieldConfig = this.filterConfig.fields[key];
-          if (fieldConfig && fieldConfig.relation && fieldConfig.relationField) {
-            processedCondition[fieldConfig.relation] = {
-              ...(processedCondition[fieldConfig.relation] || {}),
-              [fieldConfig.relationField]: value,
-            };
-          } else {
-            // Keep direct fields as-is
-            processedCondition[key] = value;
-          }
+          // Keep direct fields as-is
+          processedCondition[key] = value;
         }
       });
 
@@ -286,7 +267,7 @@ export abstract class RelationalServerAction<
         } else {
           // For direct fields
           searchConditions.push({
-            [searchField.field]: { contains: searchTerm, mode: 'insensitive' },
+            [searchField.field]: { contains: searchTerm },
           });
         }
       });
@@ -294,17 +275,19 @@ export abstract class RelationalServerAction<
       // Default to search in all string fields from filter config
       Object.entries(this.filterConfig.fields).forEach(([field, config]) => {
         if (config.type === 'string') {
-          if (config.relation && config.relationField) {
+          const relationInfo = this.getRelationInfo(field);
+
+          if (relationInfo) {
             // For relation fields
             searchConditions.push({
-              [config.relation]: {
-                [config.relationField]: { contains: searchTerm, mode: 'insensitive' },
+              [relationInfo.relation]: {
+                [relationInfo.field]: { contains: searchTerm },
               },
             });
           } else {
             // For direct fields
             searchConditions.push({
-              [field]: { contains: searchTerm, mode: 'insensitive' },
+              [field]: { contains: searchTerm },
             });
           }
         }

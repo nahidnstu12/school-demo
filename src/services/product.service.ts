@@ -1,9 +1,8 @@
 'use server';
-import { Product, Prisma } from '@prisma/client';
-import BaseService from './base.service';
-import ProductModel from '@/models/product.model';
 import ProductDTO from '@/dtos/product.dto';
-import { FilterBuilder } from '@/utils/filterBuilder';
+import ProductModel from '@/models/product.model';
+import { Prisma, Product } from '@prisma/client';
+import BaseService from './base.service';
 
 class ProductService extends BaseService<
   Product,
@@ -52,78 +51,6 @@ class ProductService extends BaseService<
       totalProducts: stats._count.id,
       totalValue: parseFloat(stats._avg.price.toString()) * stats._sum.stock,
     };
-  }
-
-  /**
-   * Find products by filter options
-   */
-  async findByFilterOptions(options: any): Promise<Product[]> {
-    const {
-      search,
-      category,
-      minPrice,
-      maxPrice,
-      inStock,
-      featured,
-      tags,
-      sortField = 'createdAt',
-      sortDirection = 'desc',
-    } = options;
-
-    const filterBuilder = new FilterBuilder();
-
-    // Add search filter
-    if (search) {
-      filterBuilder.or([
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ]);
-    }
-
-    // Add category filter
-    if (category) {
-      filterBuilder.where('category', 'equals', category);
-    }
-
-    // Add price range filter
-    if (
-      minPrice !== undefined &&
-      minPrice !== null &&
-      maxPrice !== undefined &&
-      maxPrice !== null
-    ) {
-      filterBuilder.where('price', 'between', [minPrice, maxPrice]);
-    } else if (minPrice !== undefined && minPrice !== null) {
-      filterBuilder.where('price', 'gte', minPrice);
-    } else if (maxPrice !== undefined && maxPrice !== null) {
-      filterBuilder.where('price', 'lte', maxPrice);
-    }
-
-    // Add stock filter
-    if (inStock === true) {
-      filterBuilder.where('stock', 'gt', 0);
-    } else if (inStock === false) {
-      filterBuilder.where('stock', 'equals', 0);
-    }
-
-    // Add featured filter
-    if (featured !== undefined) {
-      filterBuilder.where('featured', 'equals', featured);
-    }
-
-    // Add tags filter
-    if (tags && Array.isArray(tags) && tags.length > 0) {
-      filterBuilder.where('tags', 'hasSome', tags);
-    }
-
-    // Add sorting
-    filterBuilder.orderBy(sortField, sortDirection as 'asc' | 'desc');
-
-    // Get filter object
-    const filter = filterBuilder.build();
-
-    // Get products using your existing model
-    return await this.model.findMany(filter);
   }
 
   /**
@@ -213,7 +140,7 @@ class ProductService extends BaseService<
       },
     });
 
-    return this.transformData(product, 'toProfile');
+    return this.transformData(product, 'toDetail');
   }
 
   /**

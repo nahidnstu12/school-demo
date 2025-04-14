@@ -11,11 +11,7 @@ export interface IService<T, CreateInput, UpdateInput, DTO = any> {
     filters?: any,
     transformMethod?: keyof DTO
   ): Promise<{ data: T[]; total: number; page: number; perPage: number; pageCount: number }>;
-  findWithRelations(
-    id: string | number,
-    relations: string[],
-    transformMethod?: keyof DTO
-  ): Promise<T | null>;
+
   count(filters?: any): Promise<number>;
   create(data: CreateInput): Promise<T>;
   createMany(data: CreateInput[]): Promise<Prisma.BatchPayload>;

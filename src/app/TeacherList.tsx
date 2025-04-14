@@ -2,12 +2,9 @@
 
 import { teacherFilterConfig } from '@/schemas/teacher';
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
-import {
-  getTeachersWithFilter,
-  getTeacherDesignations,
-  getInstitutions,
-} from '../actions/teacher.action';
+import { getTeachersWithFilter, getTeacherDesignations } from '../actions/teacher.action';
 import { useDynamicFilters } from '@/hooks/useDynamicFilter';
+import { getAllInstitutions } from '@/actions/institution.action';
 
 // Define teacher type with necessary fields for display
 interface Teacher {
@@ -99,11 +96,7 @@ export default function TeacherList() {
       setFilter('phone', 'contains', value);
     } else {
       // For other inputs
-      setFilter(
-        name,
-        name === 'institutionId' || name === 'designation' ? 'equals' : 'contains',
-        value
-      );
+      setFilter(name, teacherFilterConfig.fields[name].defaultOperator || 'contains', value);
     }
   };
 
@@ -142,7 +135,7 @@ export default function TeacherList() {
       const urlString = currentUrl.search;
 
       // Skip if URL hasn't changed
-      if (urlString === lastFetchUrlRef.current) {
+      if (urlString === lastFetchUrlRef.current && urlString !== '') {
         console.log('Skipping duplicate fetch for URL:', urlString);
         setLoading(false);
         return;
@@ -217,7 +210,7 @@ export default function TeacherList() {
         }
 
         // Fetch institutions
-        const institutionsResult = await getInstitutions();
+        const institutionsResult = await getAllInstitutions();
         if (institutionsResult.success) {
           setInstitutions(institutionsResult.data);
         }
@@ -556,14 +549,14 @@ export default function TeacherList() {
                 teachers.map((teacher) => (
                   <tr key={teacher.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {teacher.user?.firstName} {teacher.user?.lastName}
+                      {teacher.fullName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {teacher.institution?.name}
+                      {teacher.institutionName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>{teacher.user?.email}</div>
-                      <div>{teacher.user?.phone || 'N/A'}</div>
+                      <div>{teacher.email}</div>
+                      <div>{teacher.phone || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {teacher.pdsId || 'N/A'}

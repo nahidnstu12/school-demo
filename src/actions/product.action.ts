@@ -3,44 +3,25 @@ import { Product, Prisma } from '@prisma/client';
 import { z } from 'zod';
 import productSchema, {
   productCreateSchema,
+  productFilterConfig,
   ProductFormValues,
   productUpdateSchema,
 } from '@/schemas/product';
 import ProductService from '@/services/product.service';
 import { ActionResult } from './IServerAction';
-import {
-  RelationalServerAction,
-  RelationalFilterConfig,
-  RelationFieldMapping,
-} from './relation.action';
-import { filterConfig } from '@/utils/default-value';
+import { RelationalServerAction, RelationalFilterConfig } from './relation.action';
 
-// Define relation mappings for products if any exist
-const productRelationMapping: RelationFieldMapping = {
-  // Add mappings for any relations in the Product model
-  // For example if Product has a Category relation:
-  // categoryName: { relation: 'category', field: 'name' }
-};
-
-// Convert the product filterConfig to a RelationalFilterConfig
+// Convert the product productFilterConfig to a RelationalFilterConfig
 const productRelationalConfig: RelationalFilterConfig = {
-  defaultPageSize: filterConfig.defaultPageSize,
-  defaultSort: filterConfig.defaultSort,
+  defaultPageSize: productFilterConfig.defaultPageSize,
+  defaultSort: productFilterConfig.defaultSort,
   fields: {
+    ...productFilterConfig.fields,
     name: { type: 'string', defaultOperator: 'contains', urlParam: 'search' },
-    category: { type: 'string', defaultOperator: 'equals' },
-    price: { type: 'number' },
     tag: { type: 'string', defaultOperator: 'contains', urlParam: 'tag' },
-    stock: { type: 'number' },
-    featured: { type: 'boolean' },
   },
-  relationMappings: productRelationMapping,
   // Define search fields explicitly
-  searchFields: [
-    { field: 'name' },
-    { field: 'description' },
-    // Add any other searchable fields
-  ],
+  searchFields: [{ field: 'name' }, { field: 'description' }],
 };
 
 class ProductServerAction extends RelationalServerAction<
@@ -54,7 +35,7 @@ class ProductServerAction extends RelationalServerAction<
     schema: z.ZodType<ProductFormValues> = productSchema,
     service: ProductService = new ProductService()
   ) {
-    super(schema, service, productRelationalConfig, productRelationMapping);
+    super(schema, service, productRelationalConfig);
   }
 
   /**
@@ -115,13 +96,6 @@ class ProductServerAction extends RelationalServerAction<
     } catch (error) {
       return this.handleServiceError(error);
     }
-  }
-
-  /**
-   * Get products with filtering - Uses the base class implementation
-   */
-  async getProductsWithFilter(formData: FormData): Promise<ActionResult<any>> {
-    return this.getItemsWithFilter(formData);
   }
 
   /**
@@ -273,7 +247,7 @@ export async function getProduct(id: string) {
 }
 
 export async function getProductsWithFilter(formData: FormData) {
-  return productActionInstance.getProductsWithFilter(formData);
+  return productActionInstance.getItemsWithFilter(formData);
 }
 
 export async function getProductCategories() {

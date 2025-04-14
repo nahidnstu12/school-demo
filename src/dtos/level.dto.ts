@@ -3,7 +3,7 @@
 import { Level } from '@prisma/client';
 
 class LevelDTO {
-  static toProfile(level: Level) {
+  static toDetail(level: Level) {
     return {
       id: level.id,
       institutionId: level.institutionId,

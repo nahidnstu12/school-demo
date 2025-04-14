@@ -1,4 +1,3 @@
-// src/schemas/userSchema.ts
 import { UserRole } from '@prisma/client';
 import { z } from 'zod';
 
@@ -30,7 +29,4 @@ export const userSchema = z.object({
   //   }),
 });
 
-// Export type from zod schema for TypeScript type safety
 export type UserFormValues = z.infer<typeof userSchema>;
-
-// Pre-defined roles for dropdown

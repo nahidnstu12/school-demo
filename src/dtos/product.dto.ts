@@ -13,7 +13,7 @@ class ProductDTO {
   /**
    * Transform product for detailed view
    */
-  static toProfile(product: ProductWithRelations) {
+  static toDetail(product: ProductWithRelations) {
     return {
       id: product.id,
       name: product.name,
@@ -93,7 +93,7 @@ class ProductDTO {
    */
   static toAdmin(product: ProductWithRelations) {
     return {
-      ...this.toProfile(product),
+      ...this.toDetail(product),
 
       // Include internal/admin fields
       stockStatus:

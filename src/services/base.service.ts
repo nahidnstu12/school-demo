@@ -26,7 +26,7 @@ abstract class BaseService<T, CreateInput, UpdateInput, M extends IModel<T>, DTO
 
   async findById(
     id: number | string,
-    transformMethod: keyof DTO = 'toProfile' as keyof DTO
+    transformMethod: keyof DTO = 'toDetail' as keyof DTO
   ): Promise<T | null> {
     const data = await this.model.findUnique(id);
     return this.transformData(data, transformMethod);
@@ -82,29 +82,6 @@ abstract class BaseService<T, CreateInput, UpdateInput, M extends IModel<T>, DTO
     };
   }
 
-  async findWithRelations(
-    id: string | number,
-    relations: string[],
-    transformMethod: keyof DTO = 'toProfile' as keyof DTO
-  ): Promise<T | null> {
-    // Create include object for Prisma based on relations array
-    const include = relations.reduce(
-      (acc, rel) => {
-        acc[rel] = true;
-        return acc;
-      },
-      {} as Record<string, boolean>
-    );
-
-    // Find record with relations
-    const data = await this.model.findFirst({
-      where: { id },
-      include,
-    });
-
-    return this.transformData(data, transformMethod);
-  }
-
   async count(filters?: Prisma.Args<any, 'count'>): Promise<number> {
     return await this.model.count(filters);
   }
@@ -127,7 +104,7 @@ abstract class BaseService<T, CreateInput, UpdateInput, M extends IModel<T>, DTO
 
   async findOne(
     filters: Prisma.Args<any, 'findFirst'>,
-    transformMethod: keyof DTO = 'toProfile' as keyof DTO
+    transformMethod: keyof DTO = 'toDetail' as keyof DTO
   ): Promise<T | null> {
     const data = await this.model.findFirst(filters);
     return this.transformData(data, transformMethod);

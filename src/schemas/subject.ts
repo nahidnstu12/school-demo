@@ -1,3 +1,4 @@
+import { FilterConfig } from '@/utils/filter-helpers';
 import { z } from 'zod';
 
 // Base subject schema
@@ -40,3 +41,14 @@ export type SubjectFormValues = z.infer<typeof subjectSchema>;
 export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
 export type UpdateSubjectInput = z.infer<typeof updateSubjectSchema>;
 export type SubjectFilterInput = z.infer<typeof subjectFilterSchema>;
+
+export const subjectFilterConfig: FilterConfig = {
+  defaultPageSize: 10,
+  defaultSort: { field: 'createdAt', direction: 'desc' as const },
+  fields: {
+    name: { type: 'string', defaultOperator: 'contains' },
+    institutionId: { type: 'string', defaultOperator: 'equals' },
+    levelId: { type: 'string', defaultOperator: 'equals' },
+    status: { type: 'boolean', defaultOperator: 'equals' },
+  },
+};

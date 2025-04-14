@@ -1,13 +1,13 @@
 'use client';
 
 import { useDynamicFilters } from '@/hooks/useDynamicFilter';
-import { filterConfig } from '@/utils/default-value';
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   getProductCategories,
   getProductsWithFilter,
   getProductTags,
 } from '../actions/product.action';
+import { productFilterConfig } from '@/schemas/product';
 
 // Define product type
 interface ProductImage {
@@ -57,7 +57,7 @@ export default function ProductList() {
     getFilterValue,
     page,
     pageSize,
-  } = useDynamicFilters(filterConfig);
+  } = useDynamicFilters(productFilterConfig);
 
   // State for products and metadata
   const [products, setProducts] = useState<Product[]>([]);
@@ -171,10 +171,12 @@ export default function ProductList() {
           console.error('Error fetching products:', result.errors);
         }
       }
-    } catch (error) {
-      // Only log errors for non-aborted requests
-      if (error.name !== 'AbortError') {
-        console.error('Error fetching products:', error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        // Only log errors for non-aborted requests
+        if (error.name !== 'AbortError') {
+          console.error('Error fetching products:', error);
+        }
       }
     } finally {
       // Only update loading state if this request wasn't aborted
@@ -203,9 +205,10 @@ export default function ProductList() {
   const featuredValue = getFilterValue('featured'); //todo: fix
 
   // Determine current sort value for the select input
-  const sortValue = prismaFilter.orderBy
-    ? `${Object.keys(prismaFilter.orderBy)[0]}:${Object.values(prismaFilter.orderBy)[0]}`
-    : 'createdAt:desc';
+  const typedPrismaFilter = prismaFilter as { orderBy?: Record<string, 'asc' | 'desc'> };
+  const sortValue = typedPrismaFilter.orderBy
+    ? `${Object.keys(typedPrismaFilter.orderBy)[0]}:${Object.values(typedPrismaFilter.orderBy)[0]}`
+    : 'createAt:desc';
 
   // Fetch categories and tags on mount
   useEffect(() => {

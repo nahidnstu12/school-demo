@@ -25,10 +25,10 @@ class TeacherService extends BaseService<
   async getAllDesignations(): Promise<string[]> {
     try {
       const teachers = await this.model.findMany({
-        // select: {
-        //   designation: true,
-        // },
         distinct: ['designation'],
+        select: {
+          designation: true,
+        },
       });
 
       return teachers.map((t) => t.designation);

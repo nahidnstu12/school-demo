@@ -3,7 +3,7 @@
 import { User } from '@prisma/client';
 
 class UserDTO {
-  static toProfile(user: User) {
+  static toDetail(user: User) {
     return {
       id: user.id,
       email: user.email,

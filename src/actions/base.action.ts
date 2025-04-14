@@ -308,45 +308,6 @@ abstract class BaseServerAction<
   }
 
   /**
-   * Get all with pagination
-   */
-  async getAllPaginated(
-    page: number = 1,
-    perPage: number = 10,
-    filters?: any
-  ): Promise<
-    ActionResult<{
-      data: ModelType[];
-      total: number;
-      page: number;
-      perPage: number;
-      pageCount: number;
-    }>
-  > {
-    try {
-      const results = await this.service.findAllPaginated(page, perPage, filters);
-      return { success: true, data: results };
-    } catch (error) {
-      return this.handleServiceError(error);
-    }
-  }
-
-  /**
-   * Get by ID with relations
-   */
-  async getByIdWithRelations(
-    id: string | number,
-    relations: string[]
-  ): Promise<ActionResult<ModelType | null>> {
-    try {
-      const result = await this.service.findWithRelations(id, relations);
-      return { success: true, data: result };
-    } catch (error) {
-      return this.handleServiceError(error);
-    }
-  }
-
-  /**
    * Aggregate operation
    */
   async aggregate(params: any): Promise<ActionResult<any>> {

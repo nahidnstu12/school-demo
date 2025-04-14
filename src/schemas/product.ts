@@ -1,4 +1,5 @@
 // app/schemas/productSchema.ts
+import { FilterConfig } from '@/utils/filter-helpers';
 import { z } from 'zod';
 
 // Base Product schema
@@ -60,7 +61,7 @@ export const productUpdateSchema = productSchema
     message: 'At least one field must be provided for update',
   });
 
-// Schema for filtering products
+// Schema for filtering products //TODO: need to further work
 export const productFilterSchema = z.object({
   name: z.string().optional(),
   minPrice: z.coerce.number().optional(),
@@ -74,5 +75,18 @@ export const productFilterSchema = z.object({
   sortField: z.string().optional(),
   sortDirection: z.enum(['asc', 'desc']).optional(),
 });
+
+export const productFilterConfig: FilterConfig = {
+  fields: {
+    name: { type: 'string', defaultOperator: 'contains', urlParam: 'search' },
+    category: { type: 'string', defaultOperator: 'equals' },
+    price: { type: 'number' },
+    tag: { type: 'string', defaultOperator: 'contains', urlParam: 'tag' },
+    stock: { type: 'number' },
+    featured: { type: 'boolean' },
+  },
+  defaultPageSize: 12,
+  defaultSort: { field: 'createdAt', direction: 'desc' as const },
+};
 
 export default productSchema;
