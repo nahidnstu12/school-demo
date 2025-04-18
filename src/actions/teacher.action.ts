@@ -27,6 +27,12 @@ const teacherRelationalConfig: RelationalFilterConfig = {
       relation: 'user',
       relationField: 'phone',
     },
+    fullName: {
+      type: 'string',
+      defaultOperator: 'contains',
+      relation: 'user',
+      relationField: 'firstName',
+    },
   },
   include: {
     user: true,

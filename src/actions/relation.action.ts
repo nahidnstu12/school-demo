@@ -112,6 +112,8 @@ export abstract class RelationalServerAction<
       // Get data with pagination
       const results = await this.service.findAllPaginated(page, pageSize, filterObject);
 
+      console.log('Results:', JSON.stringify(results.data[0], null, 2));
+
       return { success: true, data: results };
     } catch (error) {
       console.error('Detailed error:', error);
@@ -146,6 +148,8 @@ export abstract class RelationalServerAction<
     sortField: string,
     sortDirection: 'asc' | 'desc'
   ): void {
+    console.log("sortField>>", sortField, filterObject);
+    
     // Get relation info from field config
     const relationInfo = this.getRelationInfo(sortField);
 

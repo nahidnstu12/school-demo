@@ -455,39 +455,69 @@ export function useDynamicFilters(config: FilterConfig) {
   );
 
   // Apply just page size changes without changing filters
+  // const updatePageSize = useCallback(
+  //   (newPageSize: number) => {
+  //     console.log('New page size:', newPageSize);
+
+  //     const newState = {
+  //       ...appliedFilterState,
+  //       pageSize: newPageSize,
+  //       page: 1, // Reset to page 1 when changing page size
+  //     };
+
+  //     // UPDATE URL FIRST before updating state
+  //     updateUrl(newState);
+
+  //     // Then update state
+  //     setFilterState((prev) => ({
+  //       ...prev,
+  //       pageSize: newPageSize,
+  //       page: 1,
+  //     }));
+
+  //     setAppliedFilterState((prev) => {
+  //       const updatedState = {
+  //         ...prev,
+  //         pageSize: newPageSize,
+  //         page: 1,
+  //       };
+
+  //       // Update prisma filter AFTER URL is updated
+  //       const newPrismaFilter = buildPrismaFilter(updatedState);
+  //       setPrismaFilter(newPrismaFilter);
+
+  //       return updatedState;
+  //     });
+  //   },
+  //   [appliedFilterState, updateUrl, buildPrismaFilter]
+  // );
+
   const updatePageSize = useCallback(
     (newPageSize: number) => {
       console.log('New page size:', newPageSize);
-
+  
+      // Create a new state with updated pageSize
       const newState = {
         ...appliedFilterState,
         pageSize: newPageSize,
         page: 1, // Reset to page 1 when changing page size
       };
-
-      // UPDATE URL FIRST before updating state
-      updateUrl(newState);
-
+  
+      // Force synchronous URL update first
+      const urlString = updateUrl(newState);
+      lastAppliedUrl.current = urlString;
+  
       // Then update state
-      setFilterState((prev) => ({
-        ...prev,
-        pageSize: newPageSize,
-        page: 1,
-      }));
-
-      setAppliedFilterState((prev) => {
-        const updatedState = {
-          ...prev,
-          pageSize: newPageSize,
-          page: 1,
-        };
-
-        // Update prisma filter AFTER URL is updated
-        const newPrismaFilter = buildPrismaFilter(updatedState);
-        setPrismaFilter(newPrismaFilter);
-
-        return updatedState;
+      setFilterState({
+        ...newState
       });
+  
+      // Update applied state and prisma filter
+      setAppliedFilterState(newState);
+      
+      // Update prisma filter immediately
+      const newPrismaFilter = buildPrismaFilter(newState);
+      setPrismaFilter(newPrismaFilter);
     },
     [appliedFilterState, updateUrl, buildPrismaFilter]
   );
