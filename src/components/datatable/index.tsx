@@ -19,11 +19,11 @@ import {
   TableCell,
   TableColumn,
   TableHeader,
-  TableRow
-} from "@heroui/react";
+  TableRow,
+} from '@heroui/react';
 import { ChevronDown, Plus } from 'lucide-react';
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import FilterForm from './FilterForm';
+import FilterModal from './FilterModal';
 
 // Define column configuration type
 export interface DataTableColumn<T> {
@@ -36,9 +36,6 @@ export interface DataTableColumn<T> {
   filterOptions?: { label: string; value: string | boolean }[];
 }
 
-// Filter component props
-
-
 // DataTable props
 interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
@@ -47,7 +44,7 @@ interface DataTableProps<T> {
   initialVisibleColumns?: string[];
   onAddNew?: () => void;
   statusOptions?: { name: string; uid: string }[];
-  selectionMode?: "none" | "single" | "multiple";
+  selectionMode?: 'none' | 'single' | 'multiple';
   onSelectionChange?: (keys: Selection) => void;
   relationshipFilters?: {
     parentField: string;
@@ -55,13 +52,9 @@ interface DataTableProps<T> {
     onParentChange?: (value: string) => void;
   }[];
   emptyContent?: React.ReactNode;
-  renderCell?: (item: T, columnKey: string) => React.ReactNode;
   additionalFilters?: React.ReactNode;
   title?: string;
 }
-
-// Filter Form Component
-
 
 export function DataTable<T extends Record<string, any>>({
   columns,
@@ -69,13 +62,12 @@ export function DataTable<T extends Record<string, any>>({
   fetchData,
   initialVisibleColumns,
   onAddNew,
-  selectionMode = "none",
+  selectionMode = 'none',
   onSelectionChange,
   relationshipFilters,
-  emptyContent = "No data found",
-  renderCell: customRenderCell,
+  emptyContent = 'No data found',
   additionalFilters,
-  title
+  title,
 }: DataTableProps<T>) {
   // Use the dynamic filters hook
   const {
@@ -93,26 +85,32 @@ export function DataTable<T extends Record<string, any>>({
   } = useDynamicFilters(filterConfig);
 
   // Calculate default visible columns
-  const defaultVisibleColumns = initialVisibleColumns || 
-    columns.slice(0, Math.min(4, columns.length)).map(col => col.key);
+  const defaultVisibleColumns =
+    initialVisibleColumns || columns.slice(0, Math.min(4, columns.length)).map((col) => col.key);
 
   // State for HeroUI table
   const [selectedKeys, setSelectedKeys] = useState<Selection>(new Set([]));
   const [visibleColumns, setVisibleColumns] = useState<Selection>(new Set(defaultVisibleColumns));
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
-    column: columns.find(col => col.sortable)?.key || "",
-    direction: "ascending"
+    column: columns.find((col) => col.sortable)?.key || '',
+    direction: 'ascending',
   });
+
+  const [appliedFiltersCount, setAppliedFiltersCount] = useState(0);
 
   // State for data and metadata
   const [data, setData] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Local state for current page size to avoid synchronization issues
+  const [currentPageSize, setCurrentPageSize] = useState(pageSize);
+
   // Refs for request tracking
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastFetchUrlRef = useRef<string>('');
   const pendingFetchRef = useRef<string | null>(null);
+  const pageSizeUpdateInProgress = useRef(false);
 
   // Process selection changes if callback provided
   useEffect(() => {
@@ -121,13 +119,44 @@ export function DataTable<T extends Record<string, any>>({
     }
   }, [selectedKeys, onSelectionChange]);
 
+  // Update local page size state when the hook's page size changes
+  useEffect(() => {
+    if (!pageSizeUpdateInProgress.current) {
+      setCurrentPageSize(pageSize);
+    }
+  }, [pageSize]);
+
   // Process visible columns
   const headerColumns = useMemo(() => {
-    if (visibleColumns === "all") return columns;
-    return columns.filter((column) => 
+    if (visibleColumns === 'all') return columns;
+    return columns.filter((column) =>
       Array.from(visibleColumns as Set<string>).includes(column.key)
     );
   }, [visibleColumns, columns]);
+
+  // Calculate number of active filters
+  useEffect(() => {
+    let count = 0;
+
+    // Count all active filters
+    Object.keys(filterConfig.fields).forEach((key) => {
+      const value = getFilterValue(key);
+      if (value) {
+        if (typeof value === 'object' && (value.min || value.max)) {
+          count++;
+        } else if (value !== '') {
+          count++;
+        }
+      }
+    });
+
+    // Count search as a filter if present
+    if (getFilterValue('search')) {
+      count++;
+    }
+
+    setAppliedFiltersCount(count);
+  }, [prismaFilter, getFilterValue, filterConfig.fields]);
 
   // Function to fetch data based on current filters
   const fetchDataWithFilters = async () => {
@@ -232,9 +261,9 @@ export function DataTable<T extends Record<string, any>>({
       );
     } else {
       // For standard text inputs and selects
-      const column = columns.find(col => col.key === name);
+      const column = columns.find((col) => col.key === name);
       const operator = column?.filterType === 'select' ? 'equals' : 'contains';
-      
+
       if (name === 'status' && value === '') {
         setFilter(name, 'equals', null);
       } else if (name === 'status') {
@@ -246,10 +275,10 @@ export function DataTable<T extends Record<string, any>>({
 
     // Check for relationship filters
     if (relationshipFilters) {
-      const isParentField = relationshipFilters.some(rf => rf.parentField === name);
+      const isParentField = relationshipFilters.some((rf) => rf.parentField === name);
       if (isParentField) {
         // Notify about parent field change
-        const relFilter = relationshipFilters.find(rf => rf.parentField === name);
+        const relFilter = relationshipFilters.find((rf) => rf.parentField === name);
         if (relFilter?.onParentChange) {
           relFilter.onParentChange(value);
         }
@@ -257,10 +286,21 @@ export function DataTable<T extends Record<string, any>>({
     }
   };
 
-  // Handle sort change
+  // Handle sort change from dropdown
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const [field, direction] = e.target.value.split(':');
     setSort(field, direction as 'asc' | 'desc');
+  };
+
+  // Handle column header sort click
+  const handleSortColumnChange = (descriptor: SortDescriptor) => {
+    // Update the sort descriptor for UI
+    setSortDescriptor(descriptor);
+
+    // Apply the sort to server-side
+    if (descriptor.column) {
+      setSort(descriptor.column.toString(), descriptor.direction === 'ascending' ? 'asc' : 'desc');
+    }
   };
 
   // Handle form submission - this is when we apply filters to URL and trigger data fetch
@@ -274,19 +314,70 @@ export function DataTable<T extends Record<string, any>>({
     setPage(newPage); // This will update URL and trigger data fetch
   };
 
-  // Handle page size change
-  const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSize = Number(e.target.value);
-    console.log("Page size changed to:", newSize);
-    
-    // Update the pageSize state immediately to reflect in UI
-    setPageSize(newSize);
-    
-    // Force a re-render by using setTimeout
-    setTimeout(() => {
-      // This will update URL and trigger data fetch in the hook
-      setPage(1);
-    }, 0);
+  // Direct page size handler that bypasses the hook's internal mechanism
+  const handlePageSizeChange = (newSize: number) => {
+    console.log('Page size changing to:', newSize);
+
+    if (newSize === currentPageSize) {
+      return; // No change, avoid unnecessary updates
+    }
+
+    // Mark that page size update is in progress
+    pageSizeUpdateInProgress.current = true;
+
+    // Update local state immediately for UI display
+    setCurrentPageSize(newSize);
+
+    try {
+      // Create new URLSearchParams from current URL
+      const params = new URLSearchParams(window.location.search);
+
+      // Update parameters directly
+      params.set('pageSize', newSize.toString());
+      params.set('page', '1'); // Reset to page 1
+
+      // Build the new URL
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+
+      // Update browser URL without reloading
+      window.history.pushState({ path: newUrl }, '', newUrl);
+
+      // Apply the new page size to the filter (this will NOT update URL again)
+      setPageSize(newSize);
+
+      // Now trigger a manual data fetch
+      const updatedFilter = {
+        ...prismaFilter,
+        skip: 0, // Page 1
+        take: newSize,
+      };
+
+      // Send to server
+      const formData = new FormData();
+      formData.append('filter', JSON.stringify(updatedFilter));
+
+      // Set loading state
+      setLoading(true);
+
+      // Execute the fetch
+      fetchData(formData)
+        .then((result) => {
+          if (result.success) {
+            setData(result.data.data);
+            setTotal(result.data.total);
+          }
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error('Error fetching data after page size change:', error);
+          setLoading(false);
+        });
+    } finally {
+      // Clear the flag after a delay
+      setTimeout(() => {
+        pageSizeUpdateInProgress.current = false;
+      }, 200);
+    }
   };
 
   // Clear all filters
@@ -294,24 +385,10 @@ export function DataTable<T extends Record<string, any>>({
     clearAllFilters(); // This will also trigger data fetch
   };
 
-  // Default render cell implementation
-  const renderCellDefault = useCallback((item: T, columnKey: string) => {
-    const column = columns.find(col => col.key === columnKey);
-    
-    if (column?.cell) {
-      return column.cell(item);
-    }
-    
-    return item[columnKey];
-  }, [columns]);
-
-  // Use custom or default cell renderer
-  const cellRenderer = customRenderCell || renderCellDefault;
-
   // Calculate pagination values
-  const pages = Math.ceil(total / pageSize);
-  const startItem = (page - 1) * pageSize + 1;
-  const endItem = Math.min(page * pageSize, total);
+  const pages = Math.ceil(total / currentPageSize);
+  const startItem = (page - 1) * currentPageSize + 1;
+  const endItem = Math.min(page * currentPageSize, total);
 
   // Pagination handlers
   const onNextPage = useCallback(() => {
@@ -341,93 +418,155 @@ export function DataTable<T extends Record<string, any>>({
     }
     return filterConfig.defaultSort
       ? `${filterConfig.defaultSort.field}:${filterConfig.defaultSort.direction}`
-      : columns.find(col => col.sortable)
-        ? `${columns.find(col => col.sortable)?.key}:asc`
+      : columns.find((col) => col.sortable)
+        ? `${columns.find((col) => col.sortable)?.key}:asc`
         : '';
   }, [prismaFilter, columns, filterConfig]);
 
-  // Top content with filter visibility toggle and add button
-  const topContent = useMemo(() => (
-    <div className="flex justify-between items-center py-4">
-      <div className="flex-1">
-        {title && <h1 className="text-xl font-bold">{title}</h1>}
-      </div>
-      <div className="flex gap-3">
-        <Dropdown>
-          <DropdownTrigger className="hidden sm:flex">
-            <Button endContent={<ChevronDown />} variant="flat">
-              Columns
-            </Button>
-          </DropdownTrigger>
-          <DropdownMenu
-            disallowEmptySelection
-            aria-label="Table Columns"
-            closeOnSelect={false}
-            selectedKeys={visibleColumns}
-            selectionMode="multiple"
-            onSelectionChange={setVisibleColumns}
-          >
-            {columns.map((column) => (
-              <DropdownItem key={column.key} className="capitalize">
-                {column.header}
-              </DropdownItem>
-            ))}
-          </DropdownMenu>
-        </Dropdown>
-        {onAddNew && (
-          <Button color="primary" endContent={<Plus />} onPress={onAddNew}>
-            Add New
-          </Button>
-        )}
-      </div>
-    </div>
-  ), [columns, visibleColumns, onAddNew, title]);
+  // Update sort descriptor based on URL sort
+  useEffect(() => {
+    if (sortValue) {
+      const [field, direction] = sortValue.split(':');
+      setSortDescriptor({
+        column: field,
+        direction: direction === 'asc' ? 'ascending' : 'descending',
+      });
+    }
+  }, [sortValue]);
 
-  // Table header with counts and page size selector
-  const tableHeaderContent = useMemo(() => (
-    <div className="flex justify-between items-center py-2">
-      <div className="text-sm text-default-400">
-        {loading
-          ? 'Loading...'
-          : total > 0
-            ? `Showing ${startItem} to ${endItem} of ${total} entries`
-            : 'No entries found'
-        }
+  // Top content with quick search, filter button, columns dropdown, and add button
+  const topContent = useMemo(
+    () => (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 py-4">
+          <div className="flex-1">
+            {title && <h1 className="text-xl font-bold mb-2 sm:mb-0">{title}</h1>}
+          </div>
+
+          {/* Filters and Actions Row */}
+          <div className="flex gap-2">
+            <FilterModal
+              columns={columns}
+              filterConfig={filterConfig}
+              getFilterValue={getFilterValue}
+              handleInputChange={handleInputChange}
+              handleSubmit={handleSubmit}
+              clearFilters={clearFilters}
+              sortValue={sortValue}
+              handleSortChange={handleSortChange}
+              searchValue={searchValue}
+              appliedFiltersCount={appliedFiltersCount}
+            />
+            <div className="flex gap-2">
+              <Dropdown>
+                <DropdownTrigger className="hidden sm:flex">
+                  <Button endContent={<ChevronDown />} variant="flat">
+                    Columns
+                  </Button>
+                </DropdownTrigger>
+                <DropdownMenu
+                  disallowEmptySelection
+                  aria-label="Table Columns"
+                  closeOnSelect={false}
+                  selectedKeys={visibleColumns}
+                  selectionMode="multiple"
+                  onSelectionChange={setVisibleColumns}
+                >
+                  {columns.map((column) => (
+                    <DropdownItem key={column.key} className="capitalize">
+                      {column.header}
+                    </DropdownItem>
+                  ))}
+                </DropdownMenu>
+              </Dropdown>
+
+              {onAddNew && (
+                <Button color="primary" endContent={<Plus />} onPress={onAddNew}>
+                  Add New
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Additional custom filters */}
+        {additionalFilters}
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-default-400">Rows per page:</span>
-        <Select
-            className="max-w-sm"
-            variant={"bordered"}
-            onChange={handlePageSizeChange}
-            value={pageSize}
+    ),
+    [
+      columns,
+      visibleColumns,
+      onAddNew,
+      title,
+      searchValue,
+      additionalFilters,
+      appliedFiltersCount,
+      setFilter,
+      applyFilters,
+    ]
+  );
+
+  // Render loading overlay
+  const renderLoadingOverlay = () => {
+    if (!loading) return null;
+
+    return (
+      <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+        <div className="bg-white p-3 rounded-lg shadow-md">
+          <div className="flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>
+            <span>Loading...</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Table header with counts and page size selector - Fixed to be on one line
+  const tableHeaderContent = useMemo(
+    () => (
+      <div className="flex justify-between items-center py-2">
+        <div className="text-sm text-default-400">
+          {loading && data.length === 0
+            ? 'Loading...'
+            : total > 0
+              ? `Showing ${startItem} to ${endItem} of ${total} entries`
+              : 'No entries found'}
+        </div>
+        <div className="flex items-center gap-2 min-w-[170px]">
+          <span className="text-sm whitespace-nowrap text-default-400">Rows per page:</span>
+          <Select
+            aria-label="Rows per page"
+            className="w-20 min-w-[80px]"
+            size="sm"
+            variant="bordered"
+            selectedKeys={new Set([currentPageSize.toString()])}
+            disallowEmptySelection
+            onSelectionChange={(keys) => {
+              if (keys instanceof Set && keys.size > 0) {
+                const newSize = Number(Array.from(keys)[0]);
+                handlePageSizeChange(newSize);
+              }
+            }}
           >
             <SelectItem key="10">10</SelectItem>
             <SelectItem key="25">25</SelectItem>
             <SelectItem key="50">50</SelectItem>
             <SelectItem key="100">100</SelectItem>
           </Select>
-        {/* <select
-          className="bg-transparent text-sm outline-none border border-gray-300 rounded px-2 py-1"
-          value={pageSize}
-          onChange={handlePageSizeChange}
-        >
-          <option value="10">10</option>
-          <option value="25">25</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-        </select> */}
+        </div>
       </div>
-    </div>
-  ), [loading, total, startItem, endItem, pageSize]);
+    ),
+    [loading, total, startItem, endItem, currentPageSize, handlePageSizeChange, data.length]
+  );
 
   // Bottom content with pagination
   const bottomContent = useMemo(() => {
     return total > 0 ? (
       <div className="py-2 px-2 flex justify-between items-center">
         <span className="w-[30%] text-small text-default-400">
-          {selectedKeys === "all"
-            ? "All items selected"
+          {selectedKeys === 'all'
+            ? 'All items selected'
             : `${selectedKeys instanceof Set ? selectedKeys.size : 0} of ${total} selected`}
         </span>
         <Pagination
@@ -449,70 +588,64 @@ export function DataTable<T extends Record<string, any>>({
         </div>
       </div>
     ) : null;
-  }, [selectedKeys, total, page, pages, onPreviousPage, onNextPage]);
+  }, [selectedKeys, total, page, pages, onPreviousPage, onNextPage, handlePageChange]);
 
   return (
     <div className="space-y-4">
-      {/* Filter Form */}
-      <FilterForm 
-        columns={columns}
-        filterConfig={filterConfig}
-        getFilterValue={getFilterValue}
-        handleInputChange={handleInputChange}
-        handleSubmit={handleSubmit}
-        clearFilters={clearFilters}
-        sortValue={sortValue}
-        handleSortChange={handleSortChange}
-        searchValue={searchValue}
-      />
-      
-      {/* Additional custom filters */}
-      {additionalFilters}
-
-      {/* Top Content */}
+      {/* Top Content with Title, Filters Button and Action Buttons */}
       {topContent}
 
       {/* Table Header Content */}
       {tableHeaderContent}
 
       {/* Table */}
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="bg-white shadow-md rounded-lg overflow-hidden relative">
+        {renderLoadingOverlay()}
         <Table
           isHeaderSticky
           aria-label="Data table with dynamic filters"
           bottomContent={bottomContent}
           bottomContentPlacement="outside"
           classNames={{
-            wrapper: "max-h-[600px]"
+            wrapper: 'max-h-[600px]',
           }}
           selectedKeys={selectedKeys}
           selectionMode={selectionMode}
           sortDescriptor={sortDescriptor}
           onSelectionChange={setSelectedKeys}
-          onSortChange={setSortDescriptor}
+          onSortChange={handleSortColumnChange}
         >
           <TableHeader columns={headerColumns}>
             {(column) => (
               <TableColumn
                 key={column.key}
-                align={column.key === "actions" ? "center" : "start"}
+                align={column.key === 'actions' ? 'center' : 'start'}
                 allowsSorting={column.sortable}
               >
+                {/* <div className="flex items-center">
+                  {column.header}
+                  {column.sortable && renderSortIcon(column.key)}
+                </div> */}
                 {column.header}
               </TableColumn>
             )}
           </TableHeader>
-          <TableBody 
+          <TableBody
             emptyContent={emptyContent}
             items={data}
-            isLoading={loading}
+            isLoading={loading && data.length === 0}
             loadingContent="Loading..."
           >
             {(item) => (
               <TableRow key={item.id || `row-${data.indexOf(item)}`}>
-                {(columnKey) => (
-                  <TableCell>{cellRenderer(item, columnKey as string)}</TableCell>
-                )}
+                {(columnKey) => {
+                  const column = columns.find((col) => col.key === columnKey);
+                  return (
+                    <TableCell>
+                      {column?.cell ? column.cell(item) : item[columnKey as string]}
+                    </TableCell>
+                  );
+                }}
               </TableRow>
             )}
           </TableBody>

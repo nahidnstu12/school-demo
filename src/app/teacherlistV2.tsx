@@ -5,7 +5,7 @@ import { DataTable, DataTableColumn } from '@/components/datatable';
 import { teacherFilterConfig } from '@/schemas/teacher';
 import { getTeachersWithFilter, getTeacherDesignations } from '@/actions/teacher.action';
 import { getAllInstitutions } from '@/actions/institution.action';
-import { Chip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from "@heroui/react";
+import { Chip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@heroui/react';
 import { Eye, Edit, Trash, EllipsisVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -34,7 +34,7 @@ interface Teacher {
 
 export default function TeacherList() {
   const router = useRouter();
-  
+
   // State for filter options
   const [designations, setDesignations] = useState<string[]>([]);
   const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
@@ -68,171 +68,144 @@ export default function TeacherList() {
   }, [router]);
 
   // Handle view, edit, delete actions
-  const handleView = useCallback((id: string) => {
-    router.push(`/teachers/${id}`);
-  }, [router]);
+  const handleView = useCallback(
+    (id: string) => {
+      router.push(`/teachers/${id}`);
+    },
+    [router]
+  );
 
-  const handleEdit = useCallback((id: string) => {
-    router.push(`/teachers/${id}/edit`);
-  }, [router]);
+  const handleEdit = useCallback(
+    (id: string) => {
+      router.push(`/teachers/${id}/edit`);
+    },
+    [router]
+  );
 
   const handleDelete = useCallback((id: string) => {
     // Implement delete logic or confirmation dialog
     console.log('Delete teacher', id);
   }, []);
 
-  // Render cell for the table
-  const renderCell = useCallback((teacher: Teacher, columnKey: string) => {
-    const cellValue = teacher[columnKey as keyof Teacher];
-
-    switch (columnKey) {
-      case 'fullName':
-        return (
-          <div className="flex flex-col">
-            <p className="text-bold text-small">{teacher.fullName}</p>
-            <p className="text-bold text-tiny text-default-400">{teacher.email}</p>
-          </div>
-        );
-      case 'institutionName':
-        return teacher.institutionName;
-      case 'contactInfo':
-        return (
-          <div className="flex flex-col">
-            <p>{teacher.email}</p>
-            <p>{teacher.phone || 'N/A'}</p>
-          </div>
-        );
-      case 'designation':
-        return teacher.designation;
-      case 'pdsId':
-        return teacher.pdsId || 'N/A';
-      case 'joiningDate':
-        return teacher.joiningDate 
-          ? new Date(teacher.joiningDate).toLocaleDateString() 
-          : 'N/A';
-      case 'status':
-        return (
-          <Chip 
-            className="capitalize" 
-            color={teacher.status ? "success" : "danger"} 
-            size="sm" 
-            variant="flat"
-          >
-            {teacher.status ? 'Active' : 'Inactive'}
-          </Chip>
-        );
-      case 'actions':
-        return (
-          <div className="relative flex items-center gap-2">
-            <Dropdown>
-              <DropdownTrigger>
-                <Button isIconOnly size="sm" variant="light">
-                  <EllipsisVertical className="text-default-300" />
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu aria-label="Actions">
-                <DropdownItem 
-                  key="view" 
-                  startContent={<Eye className="w-4 h-4" />}
-                  onPress={() => handleView(teacher.id)}
-                >
-                  View
-                </DropdownItem>
-                <DropdownItem 
-                  key="edit" 
-                  startContent={<Edit className="w-4 h-4" />}
-                  onPress={() => handleEdit(teacher.id)}
-                >
-                  Edit
-                </DropdownItem>
-                <DropdownItem 
-                  key="delete" 
-                  startContent={<Trash className="w-4 h-4" />} 
-                  className="text-danger" 
-                  color="danger"
-                  onPress={() => handleDelete(teacher.id)}
-                >
-                  Delete
-                </DropdownItem>
-              </DropdownMenu>
-            </Dropdown>
-          </div>
-        );
-      default:
-        return cellValue as React.ReactNode;
-    }
-  }, [handleView, handleEdit, handleDelete]);
-
-  // Define columns for the table
+  // Define columns for the table with all cell rendering logic
   const columns: DataTableColumn<Teacher>[] = [
     {
-      key: "fullName",
-      header: "Name",
+      key: 'fullName',
+      header: 'Name',
       sortable: true,
       filterable: true,
-      filterType: "text"
+      filterType: 'text',
+      cell: (teacher) => (
+        <div className="flex flex-col">
+          <p className="text-bold text-small">{teacher.fullName}</p>
+        </div>
+      ),
     },
     {
-      key: "institutionId",
-      header: "Institution",
+      key: 'institutionId',
+      header: 'Institution',
       cell: (teacher) => teacher.institutionName,
       sortable: true,
       filterable: true,
-      filterType: "select",
-      filterOptions: institutions.map(inst => ({ label: inst.name, value: inst.id }))
+      filterType: 'select',
+      filterOptions: institutions.map((inst) => ({ label: inst.name, value: inst.id })),
     },
     {
-      key: "contactInfo",
-      header: "Contact Info",
+      key: 'contactInfo',
+      header: 'Contact Info',
       cell: (teacher) => (
         <div className="flex flex-col">
           <p>{teacher.email}</p>
           <p>{teacher.phone || 'N/A'}</p>
         </div>
-      )
+      ),
     },
     {
-      key: "pdsId",
-      header: "PDS ID",
+      key: 'pdsId',
+      header: 'PDS ID',
       filterable: true,
-      filterType: "text"
+      filterType: 'text',
+      cell: (teacher) => teacher.pdsId || 'N/A',
     },
     {
-      key: "designation",
-      header: "Designation",
+      key: 'designation',
+      header: 'Designation',
       sortable: true,
       filterable: true,
-      filterType: "select",
-      filterOptions: designations.map(d => ({ label: d, value: d }))
+      filterType: 'select',
+      filterOptions: designations.map((d) => ({ label: d, value: d })),
+      cell: (teacher) => teacher.designation,
     },
     {
-      key: "joiningDate",
-      header: "Joining Date",
+      key: 'joiningDate',
+      header: 'Joining Date',
       sortable: true,
       filterable: true,
-      filterType: "dateRange"
+      filterType: 'dateRange',
+      cell: (teacher) =>
+        teacher.joiningDate ? new Date(teacher.joiningDate).toLocaleDateString() : 'N/A',
     },
     {
-      key: "status",
-      header: "Status",
+      key: 'status',
+      header: 'Status',
       sortable: true,
       filterable: true,
-      filterType: "select",
+      filterType: 'select',
       filterOptions: [
-        { label: "Active", value: true },
-        { label: "Inactive", value: false }
-      ]
+        { label: 'Active', value: true },
+        { label: 'Inactive', value: false },
+      ],
+      cell: (teacher) => (
+        <Chip
+          className="capitalize"
+          color={teacher.status ? 'success' : 'danger'}
+          size="sm"
+          variant="flat"
+        >
+          {teacher.status ? 'Active' : 'Inactive'}
+        </Chip>
+      ),
     },
     {
-      key: "actions",
-      header: "Actions"
-    }
-  ];
-
-  // Status options for filter dropdown
-  const statusOptions = [
-    { name: "Active", uid: "true" },
-    { name: "Inactive", uid: "false" }
+      key: 'actions',
+      header: 'Actions',
+      cell: (teacher) => (
+        <div className="relative flex items-center gap-2">
+          <Dropdown>
+            <DropdownTrigger>
+              <Button isIconOnly size="sm" variant="light">
+                <EllipsisVertical className="text-default-300" />
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu aria-label="Actions">
+              <DropdownItem
+                key="view"
+                startContent={<Eye className="w-4 h-4" />}
+                onPress={() => handleView(teacher.id)}
+              >
+                View
+              </DropdownItem>
+              <DropdownItem
+                key="edit"
+                startContent={<Edit className="w-4 h-4" />}
+                onPress={() => handleEdit(teacher.id)}
+              >
+                Edit
+              </DropdownItem>
+              <DropdownItem
+                key="delete"
+                startContent={<Trash className="w-4 h-4" />}
+                className="text-danger"
+                color="danger"
+                onPress={() => handleDelete(teacher.id)}
+              >
+                Delete
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -242,12 +215,17 @@ export default function TeacherList() {
         columns={columns}
         filterConfig={teacherFilterConfig}
         fetchData={getTeachersWithFilter}
-        initialVisibleColumns={["fullName", "institutionId", "designation", "joiningDate", "status", "actions"]}
+        initialVisibleColumns={[
+          'fullName',
+          'institutionId',
+          'designation',
+          'joiningDate',
+          'status',
+          'actions',
+        ]}
         onAddNew={handleAddNew}
-        statusOptions={statusOptions}
         selectionMode="multiple"
-        onSelectionChange={(keys) => console.log("Selected:", keys)}
-        renderCell={renderCell}
+        onSelectionChange={(keys) => console.log('Selected:', keys)}
         emptyContent="No teachers found"
       />
     </div>

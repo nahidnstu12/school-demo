@@ -492,34 +492,66 @@ export function useDynamicFilters(config: FilterConfig) {
   //   [appliedFilterState, updateUrl, buildPrismaFilter]
   // );
 
+  // Function to properly update page size in useDynamicFilters hook
+  // This should replace the existing updatePageSize function
+
   const updatePageSize = useCallback(
     (newPageSize: number) => {
       console.log('New page size:', newPageSize);
-  
-      // Create a new state with updated pageSize
+
+      // Create a frozen copy of the current state to avoid race conditions
       const newState = {
         ...appliedFilterState,
         pageSize: newPageSize,
         page: 1, // Reset to page 1 when changing page size
       };
-  
-      // Force synchronous URL update first
-      const urlString = updateUrl(newState);
-      lastAppliedUrl.current = urlString;
-  
-      // Then update state
-      setFilterState({
-        ...newState
-      });
-  
-      // Update applied state and prisma filter
-      setAppliedFilterState(newState);
-      
-      // Update prisma filter immediately
-      const newPrismaFilter = buildPrismaFilter(newState);
-      setPrismaFilter(newPrismaFilter);
+
+      // Flag to track if we're in the middle of a page size update
+      let isPageSizeUpdate = true;
+
+      try {
+        // Update the URL directly with the specific parameters we want to change
+        const url = new URL(window.location.href);
+        url.searchParams.set('pageSize', newPageSize.toString());
+        url.searchParams.set('page', '1');
+
+        // Remember the new URL to prevent duplicate fetches
+        lastAppliedUrl.current = url.search;
+
+        // Update browser URL without triggering navigation
+        window.history.pushState({}, '', url.toString());
+
+        // Update filter state (this should be synchronized with our direct URL change)
+        setFilterState({
+          ...newState,
+        });
+
+        // Set applied state directly
+        setAppliedFilterState(newState);
+
+        // Update prisma filter immediately with the new state
+        const newPrismaFilter = buildPrismaFilter(newState);
+        setPrismaFilter(newPrismaFilter);
+
+        // Trigger a data fetch directly
+        // setTimeout(() => {
+        //   if (isPageSizeUpdate) {
+        //     // This will use our updated prismaFilter
+        //     const formData = new FormData();
+        //     formData.append('filter', JSON.stringify(newPrismaFilter));
+        //     fetchData(formData); // Assuming fetchData is accessible here
+        //   }
+        // }, 50);
+      } catch (error) {
+        console.error('Error updating page size:', error);
+      } finally {
+        // Clear the flag after all operations complete
+        setTimeout(() => {
+          isPageSizeUpdate = false;
+        }, 200);
+      }
     },
-    [appliedFilterState, updateUrl, buildPrismaFilter]
+    [appliedFilterState, buildPrismaFilter, setFilterState, setAppliedFilterState]
   );
 
   // Apply just sort changes without changing filters
