@@ -7,6 +7,7 @@ import { Prisma, Teacher } from '@prisma/client';
 import { z } from 'zod';
 import { ActionResult } from './IServerAction';
 import { RelationalFilterConfig, RelationalServerAction } from './relation.action';
+import { TeacherActionState } from '@/components/modules/teacher/Form';
 
 // Convert the teacherFilterConfig to a RelationalFilterConfig
 const teacherRelationalConfig: RelationalFilterConfig = {
@@ -68,7 +69,7 @@ class TeacherServerAction extends RelationalServerAction<
   //   /**
 //    * Override the create method to handle both User and Teacher creation
 //    */
-  async create(formData: FormData | TeacherFormValues): Promise<ActionResult<Teacher>> {
+  async create(formData: FormData): Promise<ActionResult<Teacher>> {
     try {
       // Parse the form data
       const data = this.validateFormData(formData);
@@ -151,12 +152,21 @@ export async function getTeacherDesignations() {
   return TeacherActionInstance.getTeacherDesignations();
 }
 
-export async function createTeacher(formData: FormData | TeacherFormValues) {
+export async function createTeacher(formData: FormData) {
   console.log('teacher formData>>', formData);
   return TeacherActionInstance.create(formData);
 }
 
-export async function updateTeacher(id: string | number, formData: FormData | TeacherFormValues) {
+// export const createTeacher = async (
+//   prevState: TeacherActionState,
+//   formData: FormData
+// ): Promise<TeacherActionState> => {
+//   // Implementation would be in your action file
+//   // This is just a placeholder
+//   return { success: true, data: {} as TeacherData };
+// };
+
+export async function updateTeacher(id: string | number, formData: FormData) {
   return TeacherActionInstance.update(id, formData);
 }
 
