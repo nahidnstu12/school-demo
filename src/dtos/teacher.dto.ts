@@ -31,6 +31,8 @@ class TeacherDTO {
     return {
       id: teacher.id,
       fullName: `${teacher.user.firstName} ${teacher.user.lastName}`,
+      firstName: teacher.user.firstName,
+      lastName: teacher.user.lastName,
       institutionName: teacher.institution.name,
       institutionId: teacher.institutionId,
       phone: teacher.user.phone,

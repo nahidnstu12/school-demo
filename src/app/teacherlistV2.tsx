@@ -1,13 +1,19 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { DataTable, DataTableColumn } from '@/components/datatable';
+import { DataTable } from '@/components/datatable';
 import { teacherFilterConfig } from '@/schemas/teacher';
 import { getTeachersWithFilter, getTeacherDesignations } from '@/actions/teacher.action';
 import { getAllInstitutions } from '@/actions/institution.action';
-import { Chip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@heroui/react';
+import { Chip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button, Input } from '@heroui/react';
 import { Eye, Edit, Trash, EllipsisVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useDynamicFilters } from '@/hooks/useDynamicFilter';
+import { DataTableColumn } from '@/components/datatable/types';
+import { getAllLevels } from '@/actions/level.action';
+import { Level } from '@prisma/client';
+import useTeacherDrawer from '@/hooks/useDrawer';
+import TeacherDrawer from '@/components/modules/teacher/Drawer';
 
 // Define teacher type with necessary fields for display
 interface Teacher {
@@ -33,7 +39,21 @@ interface Teacher {
 }
 
 export default function TeacherList() {
+  const { isOpen, mode, teacherId, openDrawer, closeDrawer } = useTeacherDrawer();
   const router = useRouter();
+  const [institutionId, setInstitutionId] = useState<string>('');
+  const [levels, setLevels] = useState<Level[]>([]);
+
+  const {
+    getFilterValue,
+    setFilter
+  } = useDynamicFilters(teacherFilterConfig);
+
+  const handleSuccess = useCallback(() => {
+    // Refresh the data table - this depends on your implementation
+    // You might want to call a function that refreshes the table data
+    console.log('Teacher saved successfully');
+  }, []);
 
   // State for filter options
   const [designations, setDesignations] = useState<string[]>([]);
@@ -62,24 +82,41 @@ export default function TeacherList() {
     fetchMetadata();
   }, []);
 
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        // Fetch levels
+        const filters = institutionId ? { where: { institutionId } } : null;
+        const levelsResult = await getAllLevels(filters);
+        if (levelsResult.success) {
+          setLevels(levelsResult.data);
+        }
+      } catch (error) {
+        console.error('Error fetching metadata:', error);
+      }
+    };
+
+    fetchMetadata();
+  }, [institutionId]);
+
   // Handle Add New button click
   const handleAddNew = useCallback(() => {
-    router.push('/teachers/create');
+    openDrawer('create');
   }, [router]);
 
   // Handle view, edit, delete actions
   const handleView = useCallback(
     (id: string) => {
-      router.push(`/teachers/${id}`);
+      openDrawer('read', id);
     },
-    [router]
+    [openDrawer]
   );
 
   const handleEdit = useCallback(
     (id: string) => {
-      router.push(`/teachers/${id}/edit`);
+      openDrawer('edit', id);
     },
-    [router]
+    [openDrawer]
   );
 
   const handleDelete = useCallback((id: string) => {
@@ -95,7 +132,7 @@ export default function TeacherList() {
       sortable: true,
       filterable: true,
       filterType: 'text',
-      cell: (teacher) => (
+      cell: (teacher: Teacher) => (
         <div className="flex flex-col">
           <p className="text-bold text-small">{teacher.fullName}</p>
         </div>
@@ -104,7 +141,7 @@ export default function TeacherList() {
     {
       key: 'institutionId',
       header: 'Institution',
-      cell: (teacher) => teacher.institutionName,
+      cell: (teacher: Teacher) => teacher.institutionName,
       sortable: true,
       filterable: true,
       filterType: 'select',
@@ -113,7 +150,7 @@ export default function TeacherList() {
     {
       key: 'contactInfo',
       header: 'Contact Info',
-      cell: (teacher) => (
+      cell: (teacher: Teacher) => (
         <div className="flex flex-col">
           <p>{teacher.email}</p>
           <p>{teacher.phone || 'N/A'}</p>
@@ -125,7 +162,7 @@ export default function TeacherList() {
       header: 'PDS ID',
       filterable: true,
       filterType: 'text',
-      cell: (teacher) => teacher.pdsId || 'N/A',
+      cell: (teacher: Teacher) => teacher.pdsId || 'N/A',
     },
     {
       key: 'designation',
@@ -134,7 +171,7 @@ export default function TeacherList() {
       filterable: true,
       filterType: 'select',
       filterOptions: designations.map((d) => ({ label: d, value: d })),
-      cell: (teacher) => teacher.designation,
+      cell: (teacher: Teacher) => teacher.designation,
     },
     {
       key: 'joiningDate',
@@ -142,7 +179,7 @@ export default function TeacherList() {
       sortable: true,
       filterable: true,
       filterType: 'dateRange',
-      cell: (teacher) =>
+      cell: (teacher: Teacher) =>
         teacher.joiningDate ? new Date(teacher.joiningDate).toLocaleDateString() : 'N/A',
     },
     {
@@ -155,7 +192,7 @@ export default function TeacherList() {
         { label: 'Active', value: true },
         { label: 'Inactive', value: false },
       ],
-      cell: (teacher) => (
+      cell: (teacher: Teacher) => (
         <Chip
           className="capitalize"
           color={teacher.status ? 'success' : 'danger'}
@@ -166,68 +203,177 @@ export default function TeacherList() {
         </Chip>
       ),
     },
+    // {
+    //   key: 'actions',
+    //   header: 'Actions',
+    //   cell: (teacher: Teacher) => (
+    //     <div className="relative flex items-center gap-2">
+    //       <Dropdown>
+    //         <DropdownTrigger>
+    //           <Button isIconOnly size="sm" variant="light">
+    //             <EllipsisVertical className="text-default-300" />
+    //           </Button>
+    //         </DropdownTrigger>
+    //         <DropdownMenu aria-label="Actions">
+    //           <DropdownItem
+    //             key="view"
+    //             startContent={<Eye className="w-4 h-4" />}
+    //             onPress={() => handleView(teacher.id)}
+    //           >
+    //             View
+    //           </DropdownItem>
+    //           <DropdownItem
+    //             key="edit"
+    //             startContent={<Edit className="w-4 h-4" />}
+    //             onPress={() => handleEdit(teacher.id)}
+    //           >
+    //             Edit
+    //           </DropdownItem>
+    //           <DropdownItem
+    //             key="delete"
+    //             startContent={<Trash className="w-4 h-4" />}
+    //             className="text-danger"
+    //             color="danger"
+    //             onPress={() => handleDelete(teacher.id)}
+    //           >
+    //             Delete
+    //           </DropdownItem>
+    //         </DropdownMenu>
+    //       </Dropdown>
+    //     </div>
+    //   ),
+    // },
     {
-      key: 'actions',
-      header: 'Actions',
+      key: "actions",
+      header: "Actions",
       cell: (teacher) => (
         <div className="relative flex items-center gap-2">
-          <Dropdown>
-            <DropdownTrigger>
-              <Button isIconOnly size="sm" variant="light">
-                <EllipsisVertical className="text-default-300" />
-              </Button>
-            </DropdownTrigger>
-            <DropdownMenu aria-label="Actions">
-              <DropdownItem
-                key="view"
-                startContent={<Eye className="w-4 h-4" />}
-                onPress={() => handleView(teacher.id)}
-              >
-                View
-              </DropdownItem>
-              <DropdownItem
-                key="edit"
-                startContent={<Edit className="w-4 h-4" />}
-                onPress={() => handleEdit(teacher.id)}
-              >
-                Edit
-              </DropdownItem>
-              <DropdownItem
-                key="delete"
-                startContent={<Trash className="w-4 h-4" />}
-                className="text-danger"
-                color="danger"
-                onPress={() => handleDelete(teacher.id)}
-              >
-                Delete
-              </DropdownItem>
-            </DropdownMenu>
-          </Dropdown>
+          <Button 
+            isIconOnly 
+            size="sm" 
+            variant="light"
+            onPress={() => openDrawer('read', teacher.id)}
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+          <Button 
+            isIconOnly 
+            size="sm" 
+            variant="light"
+            onPress={() => openDrawer('edit', teacher.id)}
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+          <Button 
+            isIconOnly 
+            size="sm" 
+            variant="light" 
+            className="text-danger"
+            onPress={() => handleDelete(teacher.id)}
+          >
+            <Trash className="w-4 h-4" />
+          </Button>
         </div>
-      ),
-    },
+      )
+    }
   ];
 
+  const handleInstitutionChange = (value: string) => {
+    setInstitutionId(value);
+    setFilter('institutionId', 'equals', value);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+
+    if (name === 'institutionId') setInstitutionId(value);
+
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFilter(name, 'equals', checked);
+    } else {
+      // For other inputs
+      console.log('handleChange>>', name, value);
+
+      setFilter(
+        name,
+        // name === 'institutionId' || name === 'designation' ? 'equals' : 'contains',
+        teacherFilterConfig.fields[name].defaultOperator || 'contains',
+        value
+      );
+    }
+  };
+
   return (
+    // <div className="container mx-auto p-4">
+    //   <DataTable<Teacher>
+    //     title="Teachers"
+    //     columns={columns}
+    //     filterConfig={teacherFilterConfig}
+    //     fetchData={getTeachersWithFilter}
+    //     initialVisibleColumns={[
+    //       'fullName',
+    //       'institutionId',
+    //       'designation',
+    //       'joiningDate',
+    //       'status',
+    //       'actions',
+    //     ]}
+    //     onAddNew={handleAddNew}
+    //     selectionMode="multiple"
+    //     onSelectionChange={(keys) => console.log('Selected:', keys)}
+    //     emptyContent="No teachers found"
+    //   />
+    // </div>
     <div className="container mx-auto p-4">
       <DataTable<Teacher>
         title="Teachers"
         columns={columns}
         filterConfig={teacherFilterConfig}
         fetchData={getTeachersWithFilter}
-        initialVisibleColumns={[
-          'fullName',
-          'institutionId',
-          'designation',
-          'joiningDate',
-          'status',
-          'actions',
-        ]}
+        initialVisibleColumns={["fullName", "institutionId", "designation", "status", "actions"]}
         onAddNew={handleAddNew}
         selectionMode="multiple"
-        onSelectionChange={(keys) => console.log('Selected:', keys)}
+        onSelectionChange={(keys) => console.log("Selected:", keys)}
         emptyContent="No teachers found"
+        relationshipFilters={[
+          {
+            parentField: "institutionId",
+            childField: "levelId",
+            onParentChange: handleInstitutionChange
+          }
+        ]}
+        additionalFilters={[
+          <Input
+            key="email-filter"
+            type="email"
+            aria-label="Email Address"
+            name="email"
+            placeholder="Filter by email..."
+            value={getFilterValue('email') || ''}
+            onChange={handleInputChange}
+            variant="bordered"
+          />,
+          <Input
+            key="phone-filter"
+            type="text"
+            aria-label="Phone Number"
+            name="phone"
+            placeholder="Filter by phone..."
+            value={getFilterValue('phone') || ''}
+            onChange={handleInputChange}
+            variant="bordered"
+          />
+        ]}
+      />
+       <TeacherDrawer
+        isOpen={isOpen}
+        onClose={closeDrawer}
+        mode={mode}
+        teacherId={teacherId}
+        onSuccess={handleSuccess}
       />
     </div>
+  
   );
 }

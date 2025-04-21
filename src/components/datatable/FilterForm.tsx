@@ -4,7 +4,7 @@ import { CalendarDate, getLocalTimeZone } from '@internationalized/date';
 
 import { Search } from 'lucide-react';
 import { FormEvent } from 'react';
-import { DataTableColumn } from '.';
+import { DataTableColumn } from './types';
 import React from 'react';
 
 interface FilterFormProps {

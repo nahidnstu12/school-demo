@@ -51,6 +51,7 @@ abstract class BaseServerAction<
       const validatedData = this.schema.parse(data);
       return { success: true, data: validatedData as T };
     } catch (error) {
+      console.log('error>>', JSON.stringify(error, null, 2));
       if (error instanceof z.ZodError) {
         const errors = error.errors.map((err) => ({
           field: err.path[0],
@@ -190,7 +191,7 @@ abstract class BaseServerAction<
    */
   async create(formData: FormData): Promise<ActionResult<ModelType>> {
     const validatedData = this.validateFormData(formData);
-
+    console.log('validatedData>>', validatedData);
     if (!validatedData.success) return validatedData;
 
     try {
