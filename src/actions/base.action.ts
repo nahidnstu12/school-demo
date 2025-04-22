@@ -31,6 +31,8 @@ abstract class BaseServerAction<
     | { success: false; errors: { field: string | number; message: string }[] } {
     try {
       const data = Object.fromEntries(formData.entries()) as Record<string, unknown>;
+      data.status = formData.get('status') === 'on';
+      console.log('data base>>', data, formData.get('status'));
 
       // Handle JSON formatted data (useful for arrays or complex objects)
       if (data.jsonData && typeof data.jsonData === 'string') {
@@ -48,10 +50,12 @@ abstract class BaseServerAction<
       }
 
       // Parse and validate the standard form data
-      const validatedData = this.schema.parse(data);
+      console.log('validatedata');
+
+      const validatedData = this.schema.safeParse(data);
       return { success: true, data: validatedData as T };
     } catch (error) {
-      console.log('error>>', JSON.stringify(error, null, 2));
+      console.log('validateFormData error>>', JSON.stringify(error, null, 2));
       if (error instanceof z.ZodError) {
         const errors = error.errors.map((err) => ({
           field: err.path[0],
@@ -195,7 +199,7 @@ abstract class BaseServerAction<
     if (!validatedData.success) return validatedData;
 
     try {
-      const result = await this.service.create(validatedData.data as unknown as CreateInput);
+      const result = await this.service.create(validatedData?.data?.data as unknown as CreateInput);
       return { success: true, data: result };
     } catch (error) {
       return this.handleServiceError(error);

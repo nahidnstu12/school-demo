@@ -1,4 +1,3 @@
-// components/teachers/TeacherDrawer.tsx
 import React, { useEffect, useState } from 'react';
 import {
   Drawer,
@@ -7,15 +6,16 @@ import {
   DrawerBody,
   DrawerFooter,
   Button,
-  useDisclosure,
   Spinner,
 } from '@heroui/react';
 import { X } from 'lucide-react';
-import TeacherForm from './Form';
-import { TeacherFormValues } from '@/schemas/teacher';
-import { createTeacher, updateTeacher, getTeacherById } from '@/actions/teacher.action';
+
 import { getAllInstitutions } from '@/actions/institution.action';
-import { getTeacherDesignations } from '@/actions/teacher.action';
+import { SubjectFormValues } from '@/schemas/subject';
+import { getSubjectById } from '@/actions/subject.action';
+import { getAllLevels } from '@/actions/level.action';
+import { Level } from '@prisma/client';
+import SubjectForm from './Form';
 
 export type DrawerMode = 'create' | 'read' | 'edit';
 
@@ -35,90 +35,48 @@ export default function TeacherDrawer({
   onSuccess,
 }: TeacherDrawerProps) {
   // States
-  const [teacher, setTeacher] = useState<Partial<TeacherFormValues>>({});
+  const [subject, setSubject] = useState<Partial<SubjectFormValues>>({});
   const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
 
-  const [designations, setDesignations] = useState<string[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get drawer title based on mode
   const getTitle = () => {
     switch (mode) {
       case 'create':
-        return 'Add New Teacher';
+        return 'Add New Subject';
       case 'read':
-        return 'Teacher Details';
+        return 'Subject Details';
       case 'edit':
-        return 'Edit Teacher';
+        return 'Edit Subject';
       default:
-        return 'Teacher';
+        return 'Subject';
     }
   };
 
-  // Handle form submission
-  // const handleSubmit = async (data: TeacherFormValues) => {
-  //   setIsSubmitting(true);
-
-  //   try {
-  //     if (mode === 'create') {
-  //       // Create new teacher with combined data
-  //       console.log("create data>>", data);
-
-  //       const result = await createTeacher(data);
-  //       if (result.success) {
-  //         onSuccess?.();
-  //         onClose();
-  //       } else {
-  //         // Handle error
-  //         console.error('Failed to create teacher:', result.errors);
-  //       }
-  //     } else if (mode === 'edit' && teacherId) {
-  //       // Update existing teacher
-  //       const result = await updateTeacher(teacherId, data);
-  //       if (result.success) {
-  //         onSuccess?.();
-  //         onClose();
-  //       } else {
-  //         // Handle error
-  //         console.error('Failed to update teacher:', result.errors);
-  //       }
-  //     }
-  //   } catch (error) {
-  //     console.error('Error submitting form:', error);
-  //   } finally {
-  //     setIsSubmitting(false);
-  //   }
-  // };
-
-  // Load teacher data when drawer opens in read or edit mode
   useEffect(() => {
     const loadTeacher = async () => {
       if (!teacherId || mode === 'create') return;
 
       setIsLoading(true);
       try {
-        const result = await getTeacherById(teacherId);
+        const result = await getSubjectById(teacherId);
         if (result.success) {
           // Format data for form use
-          const teacherData = result.data;
-          setTeacher({
-            firstName: teacherData?.firstName,
-            lastName: teacherData?.lastName,
-            email: teacherData?.email,
-            phone: teacherData?.phone,
-            institutionId: teacherData?.institutionId,
-            designation: teacherData?.designation,
-            pdsId: teacherData?.pdsId || '',
-            joiningDate: teacherData?.joiningDate,
-            address: teacherData?.address || '',
-            district: teacherData?.district || '',
-            specialization: teacherData?.specialization || '',
-            status: teacherData?.status,
+          const subjectData = result.data;
+          setSubject({
+            name: subjectData?.name,
+            code: subjectData?.code || '',
+            creditHours: subjectData?.creditHours || 0,
+            description: subjectData?.description || '',
+            institutionId: subjectData?.institutionId || '',
+            levelId: subjectData?.levelId || '',
+            status: subjectData?.status || false,
           });
         }
       } catch (error) {
-        console.error('Error loading teacher:', error);
+        console.error('Error loading subject:', error);
       } finally {
         setIsLoading(false);
       }
@@ -128,7 +86,7 @@ export default function TeacherDrawer({
       loadTeacher();
     } else {
       // Reset form when drawer closes
-      setTeacher({});
+      setSubject({});
     }
   }, [isOpen, teacherId, mode]);
 
@@ -144,9 +102,9 @@ export default function TeacherDrawer({
         }
 
         // Load designations
-        const designationsResult = await getTeacherDesignations();
-        if (designationsResult.success) {
-          setDesignations(designationsResult.data);
+        const levelsResult = await getAllLevels({});
+        if (levelsResult.success) {
+          setLevels(levelsResult.data);
         }
 
         // Load districts if needed
@@ -189,13 +147,11 @@ export default function TeacherDrawer({
               <Spinner color="primary" size="lg" />
             </div>
           ) : (
-            <TeacherForm
-              defaultValues={teacher}
-              // onSubmit={handleSubmit}
+            <SubjectForm
+              defaultValues={subject}
               institutions={institutions}
-              designations={designations}
+              levels={levels}
               isReadOnly={mode === 'read'}
-              // isSubmitting={isSubmitting}
             />
           )}
         </DrawerBody>

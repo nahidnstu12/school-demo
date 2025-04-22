@@ -1,4 +1,3 @@
-// hooks/useTeacherDrawer.ts
 import { useState } from 'react';
 import { DrawerMode } from '@/components/modules/teacher/Drawer';
 
@@ -22,6 +21,6 @@ export default function useTeacherDrawer() {
     mode,
     teacherId,
     openDrawer,
-    closeDrawer
+    closeDrawer,
   };
 }

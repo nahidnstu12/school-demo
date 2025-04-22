@@ -5,6 +5,7 @@ import SubjectService from '@/services/subject.service';
 import { Prisma, Subject } from '@prisma/client';
 import { z } from 'zod';
 import { RelationalFilterConfig, RelationalServerAction } from './relation.action';
+import { ActionResult } from './IServerAction';
 
 const subjectRelationalConfig: RelationalFilterConfig = {
   defaultPageSize: subjectFilterConfig.defaultPageSize,
@@ -37,7 +38,8 @@ class SubjectServerAction extends RelationalServerAction<
 const subjectActionInstance = new SubjectServerAction();
 
 // Export standard CRUD functions
-export async function createSubject(formData: FormData) {
+export async function createSubject(prevState: ActionResult<Subject>, formData: FormData) {
+  console.log('createSubject>>', formData);
   return subjectActionInstance.create(formData);
 }
 

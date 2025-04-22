@@ -8,16 +8,16 @@ export const teacherFormSchema = z.object({
   lastName: z.string().min(1, { message: 'Last name is required (min 1 character)' }),
   email: z.string().email({ message: 'Valid email is required' }),
   phone: z.string().optional(),
-  
+
   // Teacher fields
   institutionId: z.string().min(1, { message: 'Institution is required' }),
   designation: z.string().min(1, { message: 'Designation is required' }),
   pdsId: z.string().optional(),
-  joiningDate: z.date().optional().nullable(),
+  joiningDate: z.string().optional().nullable(),
   address: z.string().optional(),
   district: z.string().optional(),
   specialization: z.string().optional(),
-  status: z.boolean().default(true),
+  status: z.string().default('true'),
 });
 
 // The form values type
@@ -47,12 +47,12 @@ export const teacherFilterConfig: FilterConfig = {
     joiningDate: { type: 'date', defaultOperator: 'equals' },
     status: { type: 'boolean', defaultOperator: 'equals' },
     pdsId: { type: 'string', defaultOperator: 'contains' },
-    
+
     // Special fields for related user
     email: { type: 'string', defaultOperator: 'contains' },
     phone: { type: 'string', defaultOperator: 'contains' },
     fullName: { type: 'string', defaultOperator: 'contains' },
-    
+
     // Global search
     search: { type: 'string', defaultOperator: 'contains' },
   },

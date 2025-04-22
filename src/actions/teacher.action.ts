@@ -67,16 +67,16 @@ class TeacherServerAction extends RelationalServerAction<
   }
 
   //   /**
-//    * Override the create method to handle both User and Teacher creation
-//    */
+  //    * Override the create method to handle both User and Teacher creation
+  //    */
   async create(formData: FormData): Promise<ActionResult<Teacher>> {
     try {
       // Parse the form data
-      const data = this.validateFormData(formData);
-      
+      const validated = this.validateFormData(formData);
+
       // Validate with the schema
-      const validated = this.schema.parse(data);
-      
+      // const validated = this.schema.parse(data);
+
       // Transaction to ensure both User and Teacher are created or none
       const teacher = await prisma.$transaction(async (tx) => {
         // 1. Create the user
@@ -139,7 +139,6 @@ class TeacherServerAction extends RelationalServerAction<
   }
 }
 
-
 // Create singleton instance
 const TeacherActionInstance = new TeacherServerAction();
 
@@ -152,7 +151,7 @@ export async function getTeacherDesignations() {
   return TeacherActionInstance.getTeacherDesignations();
 }
 
-export async function createTeacher(formData: FormData) {
+export async function createTeacher(prevState: TeacherActionState, formData: FormData) {
   console.log('teacher formData>>', formData);
   return TeacherActionInstance.create(formData);
 }
