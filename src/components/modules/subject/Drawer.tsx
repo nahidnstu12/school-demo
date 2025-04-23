@@ -54,6 +54,7 @@ export default function TeacherDrawer({
         return 'Subject';
     }
   };
+  console.log('teacherId>>', teacherId, mode);
 
   useEffect(() => {
     const loadTeacher = async () => {
@@ -93,7 +94,7 @@ export default function TeacherDrawer({
   // Load institutions and designations when drawer opens
   useEffect(() => {
     const loadMetadata = async () => {
-      setIsLoading(true);
+      setIsLoading(false);
       try {
         // Load institutions
         const institutionsResult = await getAllInstitutions();
@@ -106,12 +107,6 @@ export default function TeacherDrawer({
         if (levelsResult.success) {
           setLevels(levelsResult.data);
         }
-
-        // Load districts if needed
-        // const districtsResult = await getAllDistricts();
-        // if (districtsResult.success) {
-        //   setDistricts(districtsResult.data);
-        // }
       } catch (error) {
         console.error('Error loading metadata:', error);
       } finally {

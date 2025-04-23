@@ -135,7 +135,7 @@ export default function TeacherDrawer({
   // Load institutions and designations when drawer opens
   useEffect(() => {
     const loadMetadata = async () => {
-      setIsLoading(true);
+      setIsLoading(false); //TODO: change this to true
       try {
         // Load institutions
         const institutionsResult = await getAllInstitutions();

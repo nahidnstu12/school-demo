@@ -17,7 +17,7 @@ export const teacherFormSchema = z.object({
   address: z.string().optional(),
   district: z.string().optional(),
   specialization: z.string().optional(),
-  status: z.string().default('true'),
+  status: z.boolean().default(true),
 });
 
 // The form values type

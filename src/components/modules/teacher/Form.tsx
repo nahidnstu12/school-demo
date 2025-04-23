@@ -399,6 +399,7 @@ export default function TeacherFormWithAction({
           name="status"
           defaultSelected={defaultValues.status !== false}
           isDisabled={isReadOnly || isPending}
+          value={'on'}
         >
           Active Status
         </Checkbox>

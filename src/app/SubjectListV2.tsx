@@ -209,6 +209,8 @@ export default function SubjectList() {
     },
   ];
 
+  if (teacherId) console.log('teacherid', teacherId);
+
   return (
     <div className="container mx-auto p-4">
       <DataTable<ISubject>

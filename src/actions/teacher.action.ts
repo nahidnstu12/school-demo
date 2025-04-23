@@ -73,7 +73,7 @@ class TeacherServerAction extends RelationalServerAction<
     try {
       // Parse the form data
       const validated = this.validateFormData(formData);
-
+      console.log('validated action>>', validated);
       // Validate with the schema
       // const validated = this.schema.parse(data);
 
@@ -82,10 +82,10 @@ class TeacherServerAction extends RelationalServerAction<
         // 1. Create the user
         const user = await tx.user.create({
           data: {
-            firstName: validated.firstName,
-            lastName: validated.lastName,
-            email: validated.email,
-            phone: validated.phone || null,
+            firstName: validated.data.firstName,
+            lastName: validated.data.lastName,
+            email: validated.data.email,
+            phone: validated.data.phone || null,
             // You'll need to implement password generation or set a default
             password: await this.generatePasswordHash('password123'), // Example, use a proper implementation
             role: 'TEACHER', // Set the appropriate role
@@ -96,14 +96,14 @@ class TeacherServerAction extends RelationalServerAction<
         const teacher = await tx.teacher.create({
           data: {
             userId: user.id,
-            institutionId: validated.institutionId,
-            designation: validated.designation,
-            joiningDate: validated.joiningDate || null,
-            address: validated.address || null,
-            district: validated.district || null,
-            specialization: validated.specialization || null,
-            pdsId: validated.pdsId || null,
-            status: validated.status,
+            institutionId: validated.data.institutionId,
+            designation: validated.data.designation,
+            joiningDate: validated.data.joiningDate || null,
+            address: validated.data.address || null,
+            district: validated.data.district || null,
+            specialization: validated.data.specialization || null,
+            pdsId: validated.data.pdsId || null,
+            status: validated.data.status,
           },
         });
 

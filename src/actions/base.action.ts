@@ -40,7 +40,7 @@ abstract class BaseServerAction<
           const jsonData = JSON.parse(data.jsonData as string);
           // Parse and validate the data
           const validatedData = this.schema.parse(jsonData);
-          return { success: true, data: validatedData as T };
+          return validatedData as { success: true; data: T };
         } catch (jsonError) {
           return {
             success: false,
@@ -50,10 +50,9 @@ abstract class BaseServerAction<
       }
 
       // Parse and validate the standard form data
-      console.log('validatedata');
 
       const validatedData = this.schema.safeParse(data);
-      return { success: true, data: validatedData as T };
+      return validatedData as { success: true; data: T };
     } catch (error) {
       console.log('validateFormData error>>', JSON.stringify(error, null, 2));
       if (error instanceof z.ZodError) {
@@ -195,11 +194,10 @@ abstract class BaseServerAction<
    */
   async create(formData: FormData): Promise<ActionResult<ModelType>> {
     const validatedData = this.validateFormData(formData);
-    console.log('validatedData>>', validatedData);
     if (!validatedData.success) return validatedData;
 
     try {
-      const result = await this.service.create(validatedData?.data?.data as unknown as CreateInput);
+      const result = await this.service.create(validatedData?.data as unknown as CreateInput);
       return { success: true, data: result };
     } catch (error) {
       return this.handleServiceError(error);
