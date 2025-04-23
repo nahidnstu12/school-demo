@@ -8,7 +8,6 @@ import {
   Button,
   Spinner,
 } from '@heroui/react';
-import { X } from 'lucide-react';
 
 import { getAllInstitutions } from '@/actions/institution.action';
 import { SubjectFormValues } from '@/schemas/subject';
@@ -19,27 +18,27 @@ import SubjectForm from './Form';
 
 export type DrawerMode = 'create' | 'read' | 'edit';
 
-interface TeacherDrawerProps {
+interface SubjectDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   mode: DrawerMode;
-  teacherId?: string;
+  subjectId?: string;
   onSuccess?: () => void;
 }
 
-export default function TeacherDrawer({
+export default function SubjectDrawer({
   isOpen,
   onClose,
   mode,
-  teacherId,
+  subjectId,
   onSuccess,
-}: TeacherDrawerProps) {
+}: SubjectDrawerProps) {
   // States
   const [subject, setSubject] = useState<Partial<SubjectFormValues>>({});
   const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
-
   const [levels, setLevels] = useState<Level[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDataReady, setIsDataReady] = useState(false);
 
   // Get drawer title based on mode
   const getTitle = () => {
@@ -54,15 +53,22 @@ export default function TeacherDrawer({
         return 'Subject';
     }
   };
-  console.log('teacherId>>', teacherId, mode);
+  
+  console.log('subjectId>>', subjectId, mode);
 
   useEffect(() => {
-    const loadTeacher = async () => {
-      if (!teacherId || mode === 'create') return;
+    const loadSubject = async () => {
+      if (!subjectId || mode === 'create') {
+        setIsDataReady(true);
+        return;
+      }
 
       setIsLoading(true);
+      setIsDataReady(false);
+      
       try {
-        const result = await getSubjectById(teacherId);
+        const result = await getSubjectById(subjectId);
+        console.log('subject result>>', result);
         if (result.success) {
           // Format data for form use
           const subjectData = result.data;
@@ -75,6 +81,7 @@ export default function TeacherDrawer({
             levelId: subjectData?.levelId || '',
             status: subjectData?.status || false,
           });
+          setIsDataReady(true);
         }
       } catch (error) {
         console.error('Error loading subject:', error);
@@ -83,27 +90,31 @@ export default function TeacherDrawer({
       }
     };
 
+    // Load data when the drawer opens or when mode/subjectId changes
     if (isOpen) {
-      loadTeacher();
+      loadSubject();
     } else {
       // Reset form when drawer closes
       setSubject({});
+      setIsDataReady(false);
     }
-  }, [isOpen, teacherId, mode]);
+  }, [isOpen, subjectId, mode]);
 
-  // Load institutions and designations when drawer opens
+  // Load institutions and levels when drawer opens
   useEffect(() => {
     const loadMetadata = async () => {
-      setIsLoading(false);
+      setIsLoading(true);
       try {
-        // Load institutions
-        const institutionsResult = await getAllInstitutions();
+        // Load institutions and levels in parallel
+        const [institutionsResult, levelsResult] = await Promise.all([
+          getAllInstitutions(),
+          getAllLevels({})
+        ]);
+        
         if (institutionsResult.success) {
           setInstitutions(institutionsResult.data);
         }
 
-        // Load designations
-        const levelsResult = await getAllLevels({});
         if (levelsResult.success) {
           setLevels(levelsResult.data);
         }
@@ -124,29 +135,22 @@ export default function TeacherDrawer({
       <DrawerContent>
         <DrawerHeader className="border-b">
           {getTitle()}
-          <Button
-            isIconOnly
-            variant="light"
-            radius="full"
-            size="sm"
-            onPress={onClose}
-            className="absolute right-4 top-4"
-          >
-            <X size={20} />
-          </Button>
         </DrawerHeader>
 
         <DrawerBody>
-          {isLoading ? (
+          {isLoading && !isDataReady ? (
             <div className="flex justify-center items-center h-64">
               <Spinner color="primary" size="lg" />
             </div>
           ) : (
             <SubjectForm
+              subjectId={subjectId}
               defaultValues={subject}
               institutions={institutions}
               levels={levels}
               isReadOnly={mode === 'read'}
+              mode={mode}
+              onSuccess={onSuccess}
             />
           )}
         </DrawerBody>

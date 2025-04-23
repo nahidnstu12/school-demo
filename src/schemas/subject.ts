@@ -2,14 +2,31 @@ import { FilterConfig } from '@/utils/filter-helpers';
 import { z } from 'zod';
 
 // Base subject schema
+// export const subjectSchema = z.object({
+//   institutionId: z.string(),
+//   levelId: z.string(),
+//   name: z.string().min(1, 'Name is required'),
+//   code: z.string().optional(),
+//   creditHours: z.number().optional(),
+//   description: z.string().optional(),
+//   status: z.boolean(),
+// });
 export const subjectSchema = z.object({
   institutionId: z.string(),
   levelId: z.string(),
   name: z.string().min(1, 'Name is required'),
   code: z.string().optional(),
-  creditHours: z.number().optional(),
+  // Convert string to number for creditHours
+  creditHours: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined) ? undefined : Number(val),
+    z.number().optional()
+  ),
   description: z.string().optional(),
-  status: z.boolean(),
+  // Convert string to boolean for status
+  status: z.preprocess(
+    (val) => val === 'true' || val === true || val === 'on',
+    z.boolean()
+  ),
 });
 
 // Create subject schema (extends base schema)

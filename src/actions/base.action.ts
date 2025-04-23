@@ -31,8 +31,8 @@ abstract class BaseServerAction<
     | { success: false; errors: { field: string | number; message: string }[] } {
     try {
       const data = Object.fromEntries(formData.entries()) as Record<string, unknown>;
-      data.status = formData.get('status') === 'on';
-      console.log('data base>>', data, formData.get('status'));
+      
+      console.log('data base>>', data);
 
       // Handle JSON formatted data (useful for arrays or complex objects)
       if (data.jsonData && typeof data.jsonData === 'string') {
@@ -52,6 +52,8 @@ abstract class BaseServerAction<
       // Parse and validate the standard form data
 
       const validatedData = this.schema.safeParse(data);
+      console.log("validateData field>>", JSON.stringify(validatedData, null, 2));
+      
       return validatedData as { success: true; data: T };
     } catch (error) {
       console.log('validateFormData error>>', JSON.stringify(error, null, 2));
@@ -195,9 +197,12 @@ abstract class BaseServerAction<
   async create(formData: FormData): Promise<ActionResult<ModelType>> {
     const validatedData = this.validateFormData(formData);
     if (!validatedData.success) return validatedData;
-
+    console.log("validateData create action>>", validatedData);
+    
     try {
       const result = await this.service.create(validatedData?.data as unknown as CreateInput);
+      console.log("create data successfully", result);
+      
       return { success: true, data: result };
     } catch (error) {
       return this.handleServiceError(error);

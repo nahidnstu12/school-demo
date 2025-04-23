@@ -13,7 +13,7 @@ import { Button, Chip } from '@heroui/react';
 import { Level } from '@prisma/client';
 import { Edit, Eye, Trash } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 
 // Define subject type with necessary fields for display
 interface ISubject {
@@ -29,38 +29,55 @@ interface ISubject {
 }
 
 export default function SubjectList() {
-  const { isOpen, mode, teacherId, openDrawer, closeDrawer } = useTeacherDrawer();
+  const { isOpen, mode, itemId, openDrawer, closeDrawer } = useTeacherDrawer();
   const router = useRouter();
+  
+  // State for filter options
   const [institutionId, setInstitutionId] = useState<string>('');
   const [levels, setLevels] = useState<Level[]>([]);
+  const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
+  
+  // Reference to the DataTable's refetch function
+  const dataTableRef = useRef<{
+    refetchData: () => void;
+  } | null>(null);
+  
+  // Track when we need to refresh data
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   const { getFilterValue, setFilter } = useDynamicFilters(subjectFilterConfig);
 
+  // Improved handleSuccess callback to actually refresh data
   const handleSuccess = useCallback(() => {
-    // Refresh the data table - this depends on your implementation
-    // You might want to call a function that refreshes the table data
-    console.log('Teacher saved successfully');
-  }, []);
+    console.log('Subject saved successfully, refreshing data...');
+    
+    // Option 1: Use the refreshTrigger state to force a re-fetch
+    setRefreshTrigger(prev => prev + 1);
+    
+    // Option 2: If you implemented a ref-based approach with the DataTable
+    if (dataTableRef.current) {
+      dataTableRef.current.refetchData();
+    }
+    
+    // Close the drawer after success
+    closeDrawer();
+  }, [closeDrawer]);
 
-  // State for filter options
-  const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
+  // Modified fetchData function that includes the refreshTrigger dependency
+  const fetchSubjectsWithFilter = useCallback((formData: FormData) => {
+    console.log('Fetching subjects with filter...');
+    return getSubjectsWithFilter(formData);
+  }, [refreshTrigger]); // Adding refreshTrigger as a dependency
 
   // Fetch designations and institutions on mount
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        // Fetch designations
-
         // Fetch institutions
         const institutionsResult = await getAllInstitutions();
         if (institutionsResult.success) {
           setInstitutions(institutionsResult.data);
         }
-
-        // const levelsResult = await getAllLevels({});
-        // if (levelsResult.success) {
-        //   setLevels(levelsResult.data);
-        // }
       } catch (error) {
         console.error('Error fetching metadata:', error);
       }
@@ -89,22 +106,7 @@ export default function SubjectList() {
   // Handle Add New button click
   const handleAddNew = useCallback(() => {
     openDrawer('create');
-  }, [router]);
-
-  // Handle view, edit, delete actions
-  const handleView = useCallback(
-    (id: string) => {
-      openDrawer('read', id);
-    },
-    [openDrawer]
-  );
-
-  const handleEdit = useCallback(
-    (id: string) => {
-      openDrawer('edit', id);
-    },
-    [openDrawer]
-  );
+  }, [openDrawer]);
 
   const handleDelete = useCallback((id: string) => {
     // Implement delete logic or confirmation dialog
@@ -209,17 +211,16 @@ export default function SubjectList() {
     },
   ];
 
-  if (teacherId) console.log('teacherid', teacherId);
-
   return (
     <div className="container mx-auto p-4">
-      <DataTable<ISubject>
+      <DataTable
         title="Subjects"
         columns={columns}
         filterConfig={subjectFilterConfig}
-        fetchData={getSubjectsWithFilter}
+        fetchData={fetchSubjectsWithFilter} // Using our modified fetch function
         initialVisibleColumns={[
           'name',
+          'code',
           'status',
           'institutionId',
           'levelId',
@@ -230,13 +231,15 @@ export default function SubjectList() {
         selectionMode="multiple"
         onSelectionChange={(keys) => console.log('Selected:', keys)}
         emptyContent="No subjects found"
+        // Optional: If you implement the ref approach in DataTable
+        ref={dataTableRef}
       />
       <SubjectDrawer
         isOpen={isOpen}
         onClose={closeDrawer}
         mode={mode}
-        subjectId={teacherId}
-        onSuccess={handleSuccess}
+        subjectId={itemId}
+        onSuccess={handleSuccess} // Using our improved success handler
       />
     </div>
   );

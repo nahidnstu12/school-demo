@@ -1,3 +1,4 @@
+import { TeacherActionState } from '@/components/modules/teacher/Form';
 'use server';
 import { prisma } from '@/lib/prisma';
 import { teacherFilterConfig, teacherFormSchema, TeacherFormValues } from '@/schemas/teacher';
@@ -7,7 +8,6 @@ import { Prisma, Teacher } from '@prisma/client';
 import { z } from 'zod';
 import { ActionResult } from './IServerAction';
 import { RelationalFilterConfig, RelationalServerAction } from './relation.action';
-import { TeacherActionState } from '@/components/modules/teacher/Form';
 
 // Convert the teacherFilterConfig to a RelationalFilterConfig
 const teacherRelationalConfig: RelationalFilterConfig = {
@@ -151,7 +151,7 @@ export async function getTeacherDesignations() {
   return TeacherActionInstance.getTeacherDesignations();
 }
 
-export async function createTeacher(prevState: TeacherActionState, formData: FormData) {
+export async function createTeacher(prevState: ActionResult<Teacher>, formData: FormData) {
   console.log('teacher formData>>', formData);
   return TeacherActionInstance.create(formData);
 }

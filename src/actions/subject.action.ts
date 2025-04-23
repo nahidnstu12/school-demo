@@ -43,7 +43,7 @@ export async function createSubject(prevState: ActionResult<Subject>, formData: 
   return subjectActionInstance.create(formData);
 }
 
-export async function updateSubject(id: string | number, formData: FormData) {
+export async function updateSubject(prevState: ActionResult<Subject>, id: string | number, formData: FormData) {
   return subjectActionInstance.update(id, formData);
 }
 
@@ -52,7 +52,9 @@ export async function deleteSubject(id: string | number) {
 }
 
 export async function getSubjectById(id: string | number) {
-  return subjectActionInstance.getById(id);
+  console.log("subject id action>>", id);
+  
+  return subjectActionInstance.findOne({ where: {id}, include: { institution: true, level: true } });
 }
 
 export async function getSubjectsWithFilter(formData: FormData) {

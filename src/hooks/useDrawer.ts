@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { DrawerMode } from '@/components/modules/teacher/Drawer';
 
-export default function useTeacherDrawer() {
+export default function useDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<DrawerMode>('create');
-  const [teacherId, setTeacherId] = useState<string | undefined>(undefined);
+  const [itemId, setItemId] = useState<string | undefined>(undefined);
 
   const openDrawer = (drawerMode: DrawerMode, id?: string) => {
     setMode(drawerMode);
-    setTeacherId(id);
+    setItemId(id);
     setIsOpen(true);
   };
 
@@ -19,7 +19,7 @@ export default function useTeacherDrawer() {
   return {
     isOpen,
     mode,
-    teacherId,
+    itemId,
     openDrawer,
     closeDrawer,
   };
