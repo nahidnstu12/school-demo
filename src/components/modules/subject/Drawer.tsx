@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Drawer,
   DrawerContent,
@@ -6,15 +6,8 @@ import {
   DrawerBody,
   DrawerFooter,
   Button,
-  Spinner,
 } from '@heroui/react';
-
-import { getAllInstitutions } from '@/actions/institution.action';
-import { SubjectFormValues } from '@/schemas/subject';
-import { getSubjectById } from '@/actions/subject.action';
-import { getAllLevels } from '@/actions/level.action';
-import { Level } from '@prisma/client';
-import SubjectForm from './Form';
+import { SubjectForm } from './Form';
 
 export type DrawerMode = 'create' | 'read' | 'edit';
 
@@ -33,13 +26,6 @@ export default function SubjectDrawer({
   subjectId,
   onSuccess,
 }: SubjectDrawerProps) {
-  // States
-  const [subject, setSubject] = useState<Partial<SubjectFormValues>>({});
-  const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
-  const [levels, setLevels] = useState<Level[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDataReady, setIsDataReady] = useState(false);
-
   // Get drawer title based on mode
   const getTitle = () => {
     switch (mode) {
@@ -53,106 +39,34 @@ export default function SubjectDrawer({
         return 'Subject';
     }
   };
-  
-  console.log('subjectId>>', subjectId, mode);
 
-  useEffect(() => {
-    const loadSubject = async () => {
-      if (!subjectId || mode === 'create') {
-        setIsDataReady(true);
-        return;
-      }
-
-      setIsLoading(true);
-      setIsDataReady(false);
-      
-      try {
-        const result = await getSubjectById(subjectId);
-        console.log('subject result>>', result);
-        if (result.success) {
-          // Format data for form use
-          const subjectData = result.data;
-          setSubject({
-            name: subjectData?.name,
-            code: subjectData?.code || '',
-            creditHours: subjectData?.creditHours || 0,
-            description: subjectData?.description || '',
-            institutionId: subjectData?.institutionId || '',
-            levelId: subjectData?.levelId || '',
-            status: subjectData?.status || false,
-          });
-          setIsDataReady(true);
-        }
-      } catch (error) {
-        console.error('Error loading subject:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Load data when the drawer opens or when mode/subjectId changes
-    if (isOpen) {
-      loadSubject();
-    } else {
-      // Reset form when drawer closes
-      setSubject({});
-      setIsDataReady(false);
+  // Handle form success and close drawer
+  const handleFormSuccess = () => {
+    console.log('Form submission successful');
+    
+    // Call the onSuccess callback from parent to trigger data refresh
+    if (onSuccess) {
+      onSuccess();
     }
-  }, [isOpen, subjectId, mode]);
-
-  // Load institutions and levels when drawer opens
-  useEffect(() => {
-    const loadMetadata = async () => {
-      setIsLoading(true);
-      try {
-        // Load institutions and levels in parallel
-        const [institutionsResult, levelsResult] = await Promise.all([
-          getAllInstitutions(),
-          getAllLevels({})
-        ]);
-        
-        if (institutionsResult.success) {
-          setInstitutions(institutionsResult.data);
-        }
-
-        if (levelsResult.success) {
-          setLevels(levelsResult.data);
-        }
-      } catch (error) {
-        console.error('Error loading metadata:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (isOpen) {
-      loadMetadata();
-    }
-  }, [isOpen]);
+    
+    // Close the drawer after a short delay to show success message
+    setTimeout(() => {
+      onClose();
+    }, 1000);
+  };
 
   return (
     <Drawer isOpen={isOpen} onClose={onClose} placement="right" size="lg">
       <DrawerContent>
-        <DrawerHeader className="border-b">
-          {getTitle()}
-        </DrawerHeader>
+        <DrawerHeader className="border-b">{getTitle()}</DrawerHeader>
 
         <DrawerBody>
-          {isLoading && !isDataReady ? (
-            <div className="flex justify-center items-center h-64">
-              <Spinner color="primary" size="lg" />
-            </div>
-          ) : (
-            <SubjectForm
-              subjectId={subjectId}
-              defaultValues={subject}
-              institutions={institutions}
-              levels={levels}
-              isReadOnly={mode === 'read'}
-              mode={mode}
-              onSuccess={onSuccess}
-            />
-          )}
+          <SubjectForm
+            subjectId={subjectId}
+            mode={mode}
+            isReadOnly={mode === 'read'}
+            onSuccess={handleFormSuccess}
+          />
         </DrawerBody>
 
         <DrawerFooter className="border-t">

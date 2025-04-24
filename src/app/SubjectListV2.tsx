@@ -41,18 +41,12 @@ export default function SubjectList() {
   const dataTableRef = useRef<{
     refetchData: () => void;
   } | null>(null);
-  
-  // Track when we need to refresh data
-  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   const { getFilterValue, setFilter } = useDynamicFilters(subjectFilterConfig);
 
   // Improved handleSuccess callback to actually refresh data
   const handleSuccess = useCallback(() => {
     console.log('Subject saved successfully, refreshing data...');
-    
-    // Option 1: Use the refreshTrigger state to force a re-fetch
-    setRefreshTrigger(prev => prev + 1);
     
     // Option 2: If you implemented a ref-based approach with the DataTable
     if (dataTableRef.current) {
@@ -64,10 +58,10 @@ export default function SubjectList() {
   }, [closeDrawer]);
 
   // Modified fetchData function that includes the refreshTrigger dependency
-  const fetchSubjectsWithFilter = useCallback((formData: FormData) => {
-    console.log('Fetching subjects with filter...');
-    return getSubjectsWithFilter(formData);
-  }, [refreshTrigger]); // Adding refreshTrigger as a dependency
+  // const fetchSubjectsWithFilter = useCallback((formData: FormData) => {
+  //   console.log('Fetching subjects with filter...');
+  //   return getSubjectsWithFilter(formData);
+  // }, [refreshTrigger]); // Adding refreshTrigger as a dependency
 
   // Fetch designations and institutions on mount
   useEffect(() => {
@@ -217,7 +211,7 @@ export default function SubjectList() {
         title="Subjects"
         columns={columns}
         filterConfig={subjectFilterConfig}
-        fetchData={fetchSubjectsWithFilter} // Using our modified fetch function
+        fetchData={getSubjectsWithFilter} // Using our modified fetch function
         initialVisibleColumns={[
           'name',
           'code',
@@ -231,7 +225,6 @@ export default function SubjectList() {
         selectionMode="multiple"
         onSelectionChange={(keys) => console.log('Selected:', keys)}
         emptyContent="No subjects found"
-        // Optional: If you implement the ref approach in DataTable
         ref={dataTableRef}
       />
       <SubjectDrawer

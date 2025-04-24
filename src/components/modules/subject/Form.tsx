@@ -1,12 +1,25 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller, FormProvider } from 'react-hook-form';
 import { ActionResult } from '@/actions/IServerAction';
-import { createSubject, updateSubject } from '@/actions/subject.action';
-import { Button, Checkbox, Chip, Input, Select, SelectItem, Textarea } from '@heroui/react';
+import { createSubject, getSubjectById, updateSubject } from '@/actions/subject.action';
+import {
+  Button,
+  Checkbox,
+  Chip,
+  Input,
+  Select,
+  SelectItem,
+  Textarea,
+  Spinner,
+} from '@heroui/react';
 import { Subject } from '@prisma/client';
 import { useActionState } from 'react'; // Adjust this import to match your actual implementation
+import { useFormData } from './useFormData';
+import { useFormOptions } from './useFormOptions';
+import { getAllInstitutions } from '@/actions/institution.action';
+import { getAllLevels } from '@/actions/level.action';
 
 // Define the subject data type to match the schema
 export type SubjectData = {
@@ -23,28 +36,23 @@ export type DrawerMode = 'create' | 'read' | 'edit';
 
 interface SubjectFormProps {
   subjectId?: string;
-  defaultValues?: Partial<SubjectData>;
-  institutions: { id: string; name: string }[];
-  levels: { id: string; name: string }[];
+  mode: DrawerMode;
   isReadOnly?: boolean;
-  mode?: DrawerMode;
   onSuccess?: () => void;
 }
 
-export default function SubjectForm({
-  subjectId,
-  defaultValues = {},
-  institutions,
-  levels,
-  isReadOnly = false,
-  mode,
-  onSuccess,
-}: SubjectFormProps) {
-  // Initialize action state with correct type
+export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: SubjectFormProps) {
   const initialState: ActionResult<Subject> = {
     success: false,
     errors: [],
   };
+
+  // Get data for editing
+  const { data: subjectData, isLoading: isLoadingData } = useFormData(
+    getSubjectById,
+    subjectId,
+    mode !== 'create'
+  );
 
   // Set up React Hook Form
   const methods = useForm<SubjectData>({
@@ -56,58 +64,81 @@ export default function SubjectForm({
       institutionId: '',
       levelId: '',
       status: true,
-      ...defaultValues,
     },
   });
 
   const {
     control,
     reset,
+    watch,
     formState: { errors },
   } = methods;
 
+  const formValues = methods.watch(); // Get all current form values from React Hook Form
+
+  // Configuration for institutions and levels
+  const fieldConfig = {
+    institutionId: {
+      fetchFunction: getAllInstitutions,
+      dependencies: [], // No dependencies - top level dropdown
+    },
+    levelId: {
+      fetchFunction: (params: { institutionId?: string }) => getAllLevels(params),
+      dependencies: ['institutionId'], // Depends on selected institution
+    },
+  };
+
+  // Use the hook with this configuration
+  const { options, loading, errors: optionsErrors } = useFormOptions(fieldConfig, formValues);
+
   // For create mode, use createSubject directly
   const [createState, createAction, isCreatePending] = useActionState(createSubject, initialState);
-  
+
   // For update mode, need a special wrapper
   // Creating a wrapper function for updateSubject that matches the useActionState signature
-  const wrappedUpdateSubject = (prevState: ActionResult<Subject>, formData: FormData) => {
+  const wrappedUpdateSubject = (state: ActionResult<Subject>, formData: FormData) => {
     if (subjectId) {
-      return updateSubject(prevState, subjectId, formData);
+      return updateSubject(state, subjectId, formData);
     }
-    return Promise.resolve({ success: false, errors: [{ field: 'root', message: 'Missing subject ID' }] });
+    return {
+      success: false as const,  //TODO: checking this later
+      errors: [{ field: 'root', message: 'Missing subject ID' }],
+    };
   };
-  
-  const [updateState, updateAction, isUpdatePending] = useActionState(wrappedUpdateSubject, initialState);
-  
+
+  const [updateState, updateAction, isUpdatePending] = useActionState(
+    wrappedUpdateSubject,
+    initialState
+  );
+
   // Determine which state and action to use based on mode
   const state = mode === 'edit' ? updateState : createState;
   const formAction = mode === 'edit' ? updateAction : createAction;
   const isPending = mode === 'edit' ? isUpdatePending : isCreatePending;
 
-  // Update form values when defaultValues change
+  // Update form values when subjectData changes
   useEffect(() => {
-    if (defaultValues && Object.keys(defaultValues).length > 0) {
+    if (subjectData && Object.keys(subjectData).length > 0) {
       // Reset form with new values
       reset({
-        name: defaultValues.name || '',
-        code: defaultValues.code || '',
-        creditHours: defaultValues.creditHours || 0,
-        description: defaultValues.description || '',
-        institutionId: defaultValues.institutionId || '',
-        levelId: defaultValues.levelId || '',
-        status: defaultValues.status !== false,
+        name: subjectData.name || '',
+        code: subjectData.code || '',
+        creditHours: subjectData.creditHours || 0,
+        description: subjectData.description || '',
+        institutionId: subjectData.institutionId || '',
+        levelId: subjectData.levelId || '',
+        status: subjectData.status !== false,
       });
 
-      console.log('Form reset with values:', defaultValues);
+      console.log('Form reset with values:', subjectData);
     }
-  }, [defaultValues, reset]);
+  }, [subjectData, reset]);
 
   // Handle success state
   useEffect(() => {
     if (state.success) {
       console.log(`Subject ${mode === 'edit' ? 'updated' : 'created'} successfully`);
-      
+
       if (onSuccess) {
         // Call onSuccess callback to trigger data refresh in parent component
         onSuccess();
@@ -139,6 +170,15 @@ export default function SubjectForm({
             error.field === 'root' || error.field === 'unknown' || typeof error.field === 'number'
         )
       : [];
+
+  // Show loading spinner while initial data is loading
+  if (isLoadingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Spinner color="primary" size="lg" />
+      </div>
+    );
+  }
 
   return (
     <FormProvider {...methods}>
@@ -252,21 +292,24 @@ export default function SubjectForm({
                 {...field}
                 name="institutionId"
                 label="Institution"
-                placeholder="Select institution"
+                placeholder={
+                  loading.institutionId ? 'Loading institutions...' : 'Select institution'
+                }
                 selectedKeys={value ? [value] : []}
                 onSelectionChange={(keys) => {
                   const selectedKey = Array.from(keys)[0]?.toString() || '';
                   onChange(selectedKey);
                 }}
-                isDisabled={isReadOnly || isPending}
+                isDisabled={isReadOnly || isPending || loading.institutionId}
                 isInvalid={!!errors.institutionId || !!getFieldErrors('institutionId')}
                 errorMessage={
-                  errors.institutionId?.message || getFieldErrors('institutionId')?.join(', ')
+                  errors.institutionId?.message ||
+                  getFieldErrors('institutionId')?.join(', ')
                 }
                 className="w-full"
                 isRequired
               >
-                {institutions.map((institution) => (
+                {options.institutionId.map((institution) => (
                   <SelectItem key={institution.id} textValue={institution.name}>
                     {institution.name}
                   </SelectItem>
@@ -286,19 +329,22 @@ export default function SubjectForm({
                 {...field}
                 name="levelId"
                 label="Level"
-                placeholder="Select level"
+                placeholder={loading.levelId ? 'Loading levels...' : 'Select level'}
                 selectedKeys={value ? [value] : []}
                 onSelectionChange={(keys) => {
                   const selectedKey = Array.from(keys)[0]?.toString() || '';
                   onChange(selectedKey);
                 }}
-                isDisabled={isReadOnly || isPending}
+                isDisabled={isReadOnly || isPending || loading.levelId || !watch('institutionId')}
                 isInvalid={!!errors.levelId || !!getFieldErrors('levelId')}
-                errorMessage={errors.levelId?.message || getFieldErrors('levelId')?.join(', ')}
+                errorMessage={
+                  errors.levelId?.message || 
+                  getFieldErrors('levelId')?.join(', ')
+                }
                 className="w-full"
                 isRequired
               >
-                {levels.map((level) => (
+                {options.levelId.map((level) => (
                   <SelectItem key={level.id} textValue={level.name}>
                     {level.name}
                   </SelectItem>
@@ -306,6 +352,9 @@ export default function SubjectForm({
               </Select>
             )}
           />
+          {!watch('institutionId') && (
+            <div className="mt-1 text-xs text-gray-500">Please select an institution first</div>
+          )}
         </div>
 
         {/* Status */}
@@ -345,7 +394,9 @@ export default function SubjectForm({
         {/* Success indicator */}
         {state.success && (
           <div className="p-3 mt-4 text-green-700 bg-green-100 rounded-md">
-            <Chip color="success">Subject successfully {mode === 'edit' ? 'updated' : 'created'}!</Chip>
+            <Chip color="success">
+              Subject successfully {mode === 'edit' ? 'updated' : 'created'}!
+            </Chip>
           </div>
         )}
       </form>
