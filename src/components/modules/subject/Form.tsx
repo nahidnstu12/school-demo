@@ -1,32 +1,34 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useForm, Controller, FormProvider } from 'react-hook-form';
+import { getAllInstitutions } from '@/actions/institution.action';
 import { ActionResult } from '@/actions/IServerAction';
+import { getAllLevels } from '@/actions/level.action';
 import { createSubject, getSubjectById, updateSubject } from '@/actions/subject.action';
 import {
+  addToast,
   Button,
   Checkbox,
   Chip,
   Input,
   Select,
   SelectItem,
-  Textarea,
   Spinner,
+  Textarea,
 } from '@heroui/react';
 import { Subject } from '@prisma/client';
-import { useActionState } from 'react'; // Adjust this import to match your actual implementation
+import { startTransition, useActionState, useEffect, useMemo } from 'react';
+import { Controller, FormProvider, useForm, useFormState } from 'react-hook-form';
 import { useFormData } from './useFormData';
 import { useFormOptions } from './useFormOptions';
-import { getAllInstitutions } from '@/actions/institution.action';
-import { getAllLevels } from '@/actions/level.action';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { subjectSchema } from '@/schemas/subject';
 
 // Define the subject data type to match the schema
 export type SubjectData = {
   name: string;
   code: string;
-  creditHours: number;
-  description: string;
+  creditHours?: number;
+  description?: string;
   institutionId: string;
   levelId: string;
   status: boolean;
@@ -56,6 +58,9 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
 
   // Set up React Hook Form
   const methods = useForm<SubjectData>({
+    resolver: zodResolver(subjectSchema),
+    mode: 'onSubmit', // Validate on submit
+    reValidateMode: 'onChange', // Re-validate when fields change after submission
     defaultValues: {
       name: '',
       code: '',
@@ -69,6 +74,7 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
 
   const {
     control,
+    handleSubmit,
     reset,
     watch,
     formState: { errors },
@@ -76,24 +82,46 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
 
   const formValues = methods.watch(); // Get all current form values from React Hook Form
 
+  
+  if (Object.keys(errors).length>0) console.log({ errors });
+
   // Configuration for institutions and levels
-  const fieldConfig = {
-    institutionId: {
-      fetchFunction: getAllInstitutions,
-      dependencies: [], // No dependencies - top level dropdown
-    },
-    levelId: {
-      fetchFunction: (params: { institutionId?: string }) => getAllLevels(params),
-      dependencies: ['institutionId'], // Depends on selected institution
-    },
-  };
+  const fieldConfig = useMemo(
+    () => ({
+      institutions: {
+        fetchFunction: () => getAllInstitutions(),
+        dependencies: [], // No dependencies
+      },
+      levels: {
+        // Properly format the params for getAllLevels
+        fetchFunction: (params: any) => {
+          // Extract institutionId from the where clause
+          const institutionId = params?.where?.institutionId;
+
+          // Create proper filter object for the API
+          const filters = institutionId
+            ? {
+                where: {
+                  institutionId,
+                },
+              }
+            : {};
+
+          return getAllLevels(filters);
+        },
+        dependencies: ['institutionId'],
+      },
+    }),
+    []
+  );
 
   // Use the hook with this configuration
   const { options, loading, errors: optionsErrors } = useFormOptions(fieldConfig, formValues);
 
   // For create mode, use createSubject directly
   const [createState, createAction, isCreatePending] = useActionState(createSubject, initialState);
-
+  
+  
   // For update mode, need a special wrapper
   // Creating a wrapper function for updateSubject that matches the useActionState signature
   const wrappedUpdateSubject = (state: ActionResult<Subject>, formData: FormData) => {
@@ -101,7 +129,7 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
       return updateSubject(state, subjectId, formData);
     }
     return {
-      success: false as const,  //TODO: checking this later
+      success: false as const, //TODO: checking this later
       errors: [{ field: 'root', message: 'Missing subject ID' }],
     };
   };
@@ -113,8 +141,32 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
 
   // Determine which state and action to use based on mode
   const state = mode === 'edit' ? updateState : createState;
-  const formAction = mode === 'edit' ? updateAction : createAction;
+  // const formAction = mode === 'edit' ? handleSubmit(updateAction) : handleSubmit(createAction);
   const isPending = mode === 'edit' ? isUpdatePending : isCreatePending;
+
+  const onSubmit = (data: SubjectData) => {
+    // Create FormData from the form values
+    const formData = new FormData();
+    
+    // Add all form fields to FormData
+    Object.entries(data).forEach(([key, value]) => {
+      // Handle boolean values specially
+      if (typeof value === 'boolean') {
+        formData.append(key, value ? 'true' : 'false');
+      } else if (value !== null && value !== undefined) {
+        formData.append(key, String(value));
+      }
+    });
+    
+    // Use startTransition to prevent the warning
+    startTransition(() => {
+      if (mode === 'edit') {
+        updateAction(formData);
+      } else {
+        createAction(formData);
+      }
+    });
+  };
 
   // Update form values when subjectData changes
   useEffect(() => {
@@ -182,7 +234,7 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
 
   return (
     <FormProvider {...methods}>
-      <form action={formAction} className="space-y-6">
+      <form action={handleSubmit(onSubmit)} className="space-y-6">
         {/* Form-level errors */}
         {formErrors.length > 0 && (
           <div className="p-3 mb-4 text-sm text-white bg-red-500 rounded-md">
@@ -293,23 +345,22 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
                 name="institutionId"
                 label="Institution"
                 placeholder={
-                  loading.institutionId ? 'Loading institutions...' : 'Select institution'
+                  loading?.institutions ? 'Loading institutions...' : 'Select institution'
                 }
                 selectedKeys={value ? [value] : []}
                 onSelectionChange={(keys) => {
                   const selectedKey = Array.from(keys)[0]?.toString() || '';
                   onChange(selectedKey);
                 }}
-                isDisabled={isReadOnly || isPending || loading.institutionId}
+                isDisabled={isReadOnly || isPending || loading?.institutions}
                 isInvalid={!!errors.institutionId || !!getFieldErrors('institutionId')}
                 errorMessage={
-                  errors.institutionId?.message ||
-                  getFieldErrors('institutionId')?.join(', ')
+                  errors.institutionId?.message || getFieldErrors('institutionId')?.join(', ')
                 }
                 className="w-full"
-                isRequired
+                // isRequired
               >
-                {options.institutionId.map((institution) => (
+                {options?.institutions?.map((institution) => (
                   <SelectItem key={institution.id} textValue={institution.name}>
                     {institution.name}
                   </SelectItem>
@@ -329,22 +380,19 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
                 {...field}
                 name="levelId"
                 label="Level"
-                placeholder={loading.levelId ? 'Loading levels...' : 'Select level'}
+                placeholder={loading?.levels ? 'Loading levels...' : 'Select level'}
                 selectedKeys={value ? [value] : []}
                 onSelectionChange={(keys) => {
                   const selectedKey = Array.from(keys)[0]?.toString() || '';
                   onChange(selectedKey);
                 }}
-                isDisabled={isReadOnly || isPending || loading.levelId || !watch('institutionId')}
+                isDisabled={isReadOnly || isPending || loading?.levels || !watch('institutionId')}
                 isInvalid={!!errors.levelId || !!getFieldErrors('levelId')}
-                errorMessage={
-                  errors.levelId?.message || 
-                  getFieldErrors('levelId')?.join(', ')
-                }
+                errorMessage={errors.levelId?.message || getFieldErrors('levelId')?.join(', ')}
                 className="w-full"
                 isRequired
               >
-                {options.levelId.map((level) => (
+                {options?.levels?.map((level) => (
                   <SelectItem key={level.id} textValue={level.name}>
                     {level.name}
                   </SelectItem>
@@ -385,20 +433,18 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
         {/* Submit Button - Hidden in read-only mode */}
         {!isReadOnly && (
           <div className="flex justify-end">
-            <Button type="submit" color="primary" isLoading={isPending} isDisabled={isPending}>
+            <Button type="submit" color="primary" isLoading={isPending} isDisabled={isPending} onPress={()=> {
+               addToast({
+                title: mode === 'edit' ? 'Update Subject Successfully' : 'Create Subject Successfully',
+                color: "success",
+              })
+            }}>
               {mode === 'edit' ? 'Update Subject' : 'Create Subject'}
             </Button>
           </div>
         )}
 
-        {/* Success indicator */}
-        {state.success && (
-          <div className="p-3 mt-4 text-green-700 bg-green-100 rounded-md">
-            <Chip color="success">
-              Subject successfully {mode === 'edit' ? 'updated' : 'created'}!
-            </Chip>
-          </div>
-        )}
+        
       </form>
     </FormProvider>
   );

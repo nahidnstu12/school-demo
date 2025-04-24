@@ -39,7 +39,7 @@ const subjectActionInstance = new SubjectServerAction();
 
 // Export standard CRUD functions
 export async function createSubject(prevState: ActionResult<Subject>, formData: FormData) {
-  console.log('createSubject>>', formData);
+  console.log('createSubject action>>', formData);
   return subjectActionInstance.create(formData);
 }
 
@@ -59,4 +59,8 @@ export async function getSubjectById(id: string | number) {
 
 export async function getSubjectsWithFilter(formData: FormData) {
   return subjectActionInstance.getItemsWithFilter(formData);
+}
+
+export async function getAllSubjects(filters: any) {
+  return subjectActionInstance.getAll(filters);
 }

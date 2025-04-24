@@ -32,6 +32,7 @@ abstract class BaseServerAction<
     try {
       const data = Object.fromEntries(formData.entries()) as Record<string, unknown>;
       
+      
       console.log('data base>>', data);
 
       // Handle JSON formatted data (useful for arrays or complex objects)
@@ -51,12 +52,12 @@ abstract class BaseServerAction<
 
       // Parse and validate the standard form data
 
-      const validatedData = this.schema.safeParse(data);
+      const validatedData = this.schema.parse(data);
       console.log("validateData field>>", JSON.stringify(validatedData, null, 2));
       
-      return validatedData as { success: true; data: T };
+      return {success: true, data: validatedData} as { success: true; data: T };
     } catch (error) {
-      console.log('validateFormData error>>', JSON.stringify(error, null, 2));
+      console.log('validateFormData error>>', JSON.stringify(error, null, 2), error);
       if (error instanceof z.ZodError) {
         const errors = error.errors.map((err) => ({
           field: err.path[0],

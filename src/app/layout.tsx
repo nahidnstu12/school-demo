@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { HeroUIProviders } from './HeroUIProviders';
+import { ToastProvider } from '@heroui/toast';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,7 +20,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-background text-foreground`}>
-        <HeroUIProviders>{children}</HeroUIProviders>
+        <HeroUIProviders>
+          <ToastProvider
+            placement={'top-right'}
+            toastProps={{
+              radius: 'full',
+              color: 'primary',
+              variant: 'bordered',
+              // timeout: 1000,
+              hideIcon: true,
+            }}
+          />
+          {children}
+        </HeroUIProviders>
       </body>
     </html>
   );

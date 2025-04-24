@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-
+import { useState, useEffect, useRef } from 'react';
 import { ActionResult } from '@/actions/IServerAction';
 
 // Generic option type
@@ -33,8 +32,11 @@ export function useFormOptions<T extends Record<string, any>>(
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   // Store errors for each field
   const [errors, setErrors] = useState<Record<string, string | null>>({});
-
-  // Initialize state
+  
+  // Track previous form values to avoid unnecessary rerenders
+  const prevFormValuesRef = useRef<T | null>(null);
+  
+  // Initialize state once when the hook mounts or fields change
   useEffect(() => {
     const initialOptions: Record<string, OptionItem[]> = {};
     const initialLoading: Record<string, boolean> = {};
@@ -49,7 +51,14 @@ export function useFormOptions<T extends Record<string, any>>(
     setOptions(initialOptions);
     setLoading(initialLoading);
     setErrors(initialErrors);
-  }, [fields]);
+    
+    // Initial load for fields with no dependencies
+    Object.entries(fields).forEach(([fieldName, config]) => {
+      if (!config.dependencies || config.dependencies.length === 0) {
+        loadOptions(fieldName);
+      }
+    });
+  }, [Object.keys(fields).join(',')]); // Only re-run if field keys change
 
   // Function to load options for a specific field
   const loadOptions = async (fieldName: string, params?: any) => {
@@ -73,7 +82,7 @@ export function useFormOptions<T extends Record<string, any>>(
       const fetchParams = { ...config.initialParams, ...params };
       const result = await config.fetchFunction(fetchParams);
 
-      if (result.success) {
+      if (result.success && Array.isArray(result.data)) {
         const transformedOptions = config.transformFunction
           ? config.transformFunction(result.data)
           : result.data.map((item: any) => ({
@@ -102,31 +111,46 @@ export function useFormOptions<T extends Record<string, any>>(
     }
   };
 
-  // Watch for dependency changes and reload options
+  // Watch for actual changes in dependency values
   useEffect(() => {
+    // Skip the first render when prevFormValuesRef is null
+    if (!prevFormValuesRef.current) {
+      prevFormValuesRef.current = { ...formValues };
+      return;
+    }
+    
+    // Check each field's dependencies
     Object.entries(fields).forEach(([fieldName, config]) => {
-      if (config.dependencies && config.dependencies.length > 0) {
-        // Check if all dependencies have values
-        const allDependenciesFilled = config.dependencies.every((dep) => !!formValues[dep]);
-
-        if (allDependenciesFilled) {
-          // Create params from dependencies
-          const params: Record<string, any> = {};
-          config.dependencies.forEach((dep) => {
-            params[dep] = formValues[dep];
-          });
-
-          loadOptions(fieldName, { where: params });
-        } else {
-          // Clear options if dependencies are missing
-          setOptions((prev) => ({ ...prev, [fieldName]: [] }));
+      if (config?.dependencies && config?.dependencies.length > 0) {
+        // Only update if a dependency value actually changed
+        const dependencyChanged = config.dependencies.some(
+          (dep) => prevFormValuesRef.current?.[dep] !== formValues[dep]
+        );
+        
+        if (dependencyChanged) {
+          // All dependencies are filled
+          const allDependenciesFilled = config.dependencies.every((dep) => !!formValues[dep]);
+          
+          if (allDependenciesFilled) {
+            // Format params correctly for the API
+            const whereClause: Record<string, any> = {};
+            config.dependencies.forEach((dep) => {
+              whereClause[dep] = formValues[dep];
+            });
+            
+            // Load options with correctly formatted parameters
+            loadOptions(fieldName, { where: whereClause });
+          } else {
+            // Clear options if dependencies are missing
+            setOptions((prev) => ({ ...prev, [fieldName]: [] }));
+          }
         }
-      } else if (!config.dependencies || config.dependencies.length === 0) {
-        // Load initial options for fields with no dependencies
-        loadOptions(fieldName);
       }
     });
-  }, [fields, formValues]);
+    
+    // Update the previous values reference
+    prevFormValuesRef.current = { ...formValues };
+  }, [formValues, fields]);
 
   return {
     options,
