@@ -6,7 +6,7 @@ export const subjectSchema = z.object({
   institutionId: z.string().min(1, "Institution are required"),
   levelId: z.string().min(1, "Level are required"),
   name: z.string().min(3, 'Name is required'),
-  code: z.string().min(3, 'Code is required').max(4, "big code!"),
+  code: z.string().min(3, 'Code is required').max(12, "big code!"),
   // Convert string to number for creditHours
   creditHours: z.preprocess(
     (val) => (val === '' || val === null || val === undefined) ? undefined : Number(val),

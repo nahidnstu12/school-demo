@@ -4,24 +4,23 @@ import { getAllInstitutions } from '@/actions/institution.action';
 import { ActionResult } from '@/actions/IServerAction';
 import { getAllLevels } from '@/actions/level.action';
 import { createSubject, getSubjectById, updateSubject } from '@/actions/subject.action';
+import { subjectSchema } from '@/schemas/subject';
 import {
   addToast,
   Button,
   Checkbox,
-  Chip,
   Input,
   Select,
   SelectItem,
   Spinner,
-  Textarea,
+  Textarea
 } from '@heroui/react';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Subject } from '@prisma/client';
 import { startTransition, useActionState, useEffect, useMemo } from 'react';
-import { Controller, FormProvider, useForm, useFormState } from 'react-hook-form';
+import { Controller, FormProvider, useForm } from 'react-hook-form';
 import { useFormData } from './useFormData';
 import { useFormOptions } from './useFormOptions';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { subjectSchema } from '@/schemas/subject';
 
 // Define the subject data type to match the schema
 export type SubjectData = {

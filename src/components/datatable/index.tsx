@@ -177,6 +177,20 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
     setLoading(true);
 
     try {
+       // Get the CURRENT URL from the browser to ensure we're using the latest params
+       const currentUrl = new URL(window.location.href);
+       const urlString = currentUrl.search;
+ 
+       // Skip if URL hasn't changed
+       if (urlString === lastFetchUrlRef.current && urlString !== '') {
+         console.log('Skipping duplicate fetch for URL:', urlString);
+         setLoading(false);
+         return;
+       }
+ 
+       // Remember this URL for future deduplication
+       lastFetchUrlRef.current = urlString;
+       
       // Send to server
       const formData = new FormData();
       formData.append('filter', JSON.stringify(prismaFilter));

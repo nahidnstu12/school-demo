@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { DataTable } from '@/components/datatable';
-import { teacherFilterConfig } from '@/schemas/teacher';
-import { getTeachersWithFilter, getTeacherDesignations } from '@/actions/teacher.action';
 import { getAllInstitutions } from '@/actions/institution.action';
-import { Chip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button, Input } from '@heroui/react';
-import { Eye, Edit, Trash, EllipsisVertical } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useDynamicFilters } from '@/hooks/useDynamicFilter';
-import { DataTableColumn } from '@/components/datatable/types';
 import { getAllLevels } from '@/actions/level.action';
-import { Level } from '@prisma/client';
-import useTeacherDrawer from '@/hooks/useDrawer';
+import { getTeacherDesignations, getTeachersWithFilter } from '@/actions/teacher.action';
+import { DataTable } from '@/components/datatable';
+import { DataTableColumn } from '@/components/datatable/types';
 import TeacherDrawer from '@/components/modules/teacher/Drawer';
+import useTeacherDrawer from '@/hooks/useDrawer';
+import { useDynamicFilters } from '@/hooks/useDynamicFilter';
+import { teacherFilterConfig } from '@/schemas/teacher';
+import { Button, Chip, Input } from '@heroui/react';
+import { Level } from '@prisma/client';
+import { Edit, Eye, Trash } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Define teacher type with necessary fields for display
 interface Teacher {
@@ -39,10 +39,15 @@ interface Teacher {
 }
 
 export default function TeacherList() {
-  const { isOpen, mode, teacherId, openDrawer, closeDrawer } = useTeacherDrawer();
+  const { isOpen, mode, itemId, openDrawer, closeDrawer } = useTeacherDrawer();
   const router = useRouter();
   const [institutionId, setInstitutionId] = useState<string>('');
   const [levels, setLevels] = useState<Level[]>([]);
+
+    // Reference to the DataTable's refetch function
+    const dataTableRef = useRef<{
+      refetchData: () => void;
+    } | null>(null);
 
   const {
     getFilterValue,
@@ -50,10 +55,16 @@ export default function TeacherList() {
   } = useDynamicFilters(teacherFilterConfig);
 
   const handleSuccess = useCallback(() => {
-    // Refresh the data table - this depends on your implementation
-    // You might want to call a function that refreshes the table data
-    console.log('Teacher saved successfully');
-  }, []);
+    console.log('Teacher saved successfully, refreshing data...');
+    
+    // Option 2: If you implemented a ref-based approach with the DataTable
+    if (dataTableRef.current) {
+      dataTableRef.current.refetchData();
+    }
+    
+    // Close the drawer after success
+    closeDrawer();
+  }, [closeDrawer]);
 
   // State for filter options
   const [designations, setDesignations] = useState<string[]>([]);
@@ -326,7 +337,7 @@ export default function TeacherList() {
     //   />
     // </div>
     <div className="container mx-auto p-4">
-      <DataTable<Teacher>
+      <DataTable
         title="Teachers"
         columns={columns}
         filterConfig={teacherFilterConfig}
@@ -336,6 +347,7 @@ export default function TeacherList() {
         selectionMode="multiple"
         onSelectionChange={(keys) => console.log("Selected:", keys)}
         emptyContent="No teachers found"
+        ref={dataTableRef}
         relationshipFilters={[
           {
             parentField: "institutionId",
@@ -370,7 +382,7 @@ export default function TeacherList() {
         isOpen={isOpen}
         onClose={closeDrawer}
         mode={mode}
-        teacherId={teacherId}
+        teacherId={itemId}
         onSuccess={handleSuccess}
       />
     </div>

@@ -9,7 +9,7 @@ import SubjectDrawer from '@/components/modules/subject/Drawer';
 import useTeacherDrawer from '@/hooks/useDrawer';
 import { useDynamicFilters } from '@/hooks/useDynamicFilter';
 import { subjectFilterConfig } from '@/schemas/subject';
-import { Button, Chip } from '@heroui/react';
+import { Button, Chip, Input } from '@heroui/react';
 import { Level } from '@prisma/client';
 import { Edit, Eye, Trash } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -56,12 +56,6 @@ export default function SubjectList() {
     // Close the drawer after success
     closeDrawer();
   }, [closeDrawer]);
-
-  // Modified fetchData function that includes the refreshTrigger dependency
-  // const fetchSubjectsWithFilter = useCallback((formData: FormData) => {
-  //   console.log('Fetching subjects with filter...');
-  //   return getSubjectsWithFilter(formData);
-  // }, [refreshTrigger]); // Adding refreshTrigger as a dependency
 
   // Fetch designations and institutions on mount
   useEffect(() => {
@@ -113,7 +107,7 @@ export default function SubjectList() {
       key: 'name',
       header: 'Name',
       sortable: true,
-      filterable: true,
+      filterable: false, // Keep this false as requested
       filterType: 'text',
       cell: (subject: ISubject) => (
         <div className="flex flex-col">
@@ -205,13 +199,34 @@ export default function SubjectList() {
     },
   ];
 
+  const handleInstitutionChange = (value: string) => {
+    setInstitutionId(value);
+    setFilter('institutionId', 'equals', value);
+  };
+
+  // Input change handler for additional filters
+  // This only updates the filter state but doesn't apply it immediately
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    console.log(`Setting filter ${name} to ${value}`);
+    
+    // Set the filter but don't apply it yet
+    // It will be applied when the filter modal applies filters
+    setFilter(
+      name,
+      subjectFilterConfig.fields[name]?.defaultOperator || 'contains',
+      value
+    );
+  };
+
   return (
     <div className="container mx-auto p-4">
       <DataTable
         title="Subjects"
         columns={columns}
         filterConfig={subjectFilterConfig}
-        fetchData={getSubjectsWithFilter} // Using our modified fetch function
+        fetchData={getSubjectsWithFilter}
         initialVisibleColumns={[
           'name',
           'code',
@@ -226,13 +241,34 @@ export default function SubjectList() {
         onSelectionChange={(keys) => console.log('Selected:', keys)}
         emptyContent="No subjects found"
         ref={dataTableRef}
+        relationshipFilters={[
+          {
+            parentField: "institutionId",
+            childField: "levelId",
+            onParentChange: handleInstitutionChange
+          }
+        ]}
+        additionalFilters={[
+          <Input
+            key="name-filter"
+            type="text"
+            aria-label="Name"
+            // label="Name"
+            // labelPlacement="outside"
+            name="name"
+            placeholder="Filter by name..."
+            value={getFilterValue('name') || ''}
+            onChange={handleInputChange}
+            variant="bordered"
+          />
+        ]}
       />
       <SubjectDrawer
         isOpen={isOpen}
         onClose={closeDrawer}
         mode={mode}
         subjectId={itemId}
-        onSuccess={handleSuccess} // Using our improved success handler
+        onSuccess={handleSuccess}
       />
     </div>
   );

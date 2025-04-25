@@ -22,13 +22,10 @@ export default function RootLayout({
       <body className={`${inter.className} bg-background text-foreground`}>
         <HeroUIProviders>
           <ToastProvider
-            placement={'top-right'}
+            placement={'bottom-center'}
             toastProps={{
-              radius: 'full',
               color: 'primary',
-              variant: 'bordered',
-              // timeout: 1000,
-              hideIcon: true,
+              variant: 'flat',
             }}
           />
           {children}
