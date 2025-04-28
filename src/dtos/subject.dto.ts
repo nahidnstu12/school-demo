@@ -18,6 +18,7 @@ class SubjectDTO {
       levelId: subject.levelId,
       levelName: subject?.level?.name,
       creditHours: subject.creditHours,
+      createdAt: subject.createdAt,
     };
   }
 

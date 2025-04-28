@@ -13,7 +13,7 @@ import {
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { ActionResult } from '@/actions/IServerAction';
 import { useDynamicFilters } from '@/hooks/useDynamicFilter';
-import { FilterConfig } from '@/utils/filter-helpers';
+import { FilterConfig, FilterOperator } from '@/utils/filter-helpers';
 
 // Import modular components
 import { TopContent } from './TopContent';
@@ -22,6 +22,11 @@ import { BottomContent } from './BottomContent';
 import { LoadingOverlay } from './LoadingOverlay';
 import { DataTableColumn } from './types';
 
+interface AdditionalFilterValue {
+  field: string;
+  operator?: string;
+  value: any;
+}
 // DataTable props
 interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
@@ -39,7 +44,9 @@ interface DataTableProps<T> {
   }[];
   emptyContent?: React.ReactNode;
   additionalFilters?: React.ReactNode[];
+  additionalFilterValues?: AdditionalFilterValue[];
   title?: string;
+  onApplyFilters?: () => void;  
 }
 
 // Define the DataTable ref interface
@@ -59,7 +66,9 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
     relationshipFilters,
     emptyContent = 'No data found',
     additionalFilters,
+    additionalFilterValues = [],
     title,
+    onApplyFilters,
   }: DataTableProps<T>,
   ref: React.ForwardedRef<DataTableRef>
 ) {
@@ -77,6 +86,46 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
     page,
     pageSize,
   } = useDynamicFilters(filterConfig);
+
+  // Reference to track if initial filters have been applied
+  const initialFiltersAppliedRef = useRef(false);
+
+  // Effect to apply additional filter values when they change
+  useEffect(() => {
+    // Skip if no additional filter values or if they've already been applied on initial render
+    if (additionalFilterValues.length === 0) return;
+
+    // Apply each additional filter
+    additionalFilterValues.forEach(filter => {
+      const { field, operator, value } = filter;
+      
+      // Skip if the value is undefined or null or empty string
+      if (value === undefined || value === null || value === '') return;
+      
+      // Get default operator from filter config or use provided operator
+      const defaultOp = filterConfig.fields[field]?.defaultOperator || 'contains';
+      const finalOperator = operator || defaultOp;
+      
+      // Only update if the value is different from current
+      const currentValue = getFilterValue(field);
+      if (JSON.stringify(currentValue) !== JSON.stringify(value)) {
+        console.log(`Setting additional filter: ${field} ${finalOperator} ${value}`);
+        setFilter(field, finalOperator as FilterOperator, value);
+      }
+    });
+
+    // If this is the first render, apply filters immediately
+    if (!initialFiltersAppliedRef.current) {
+      initialFiltersAppliedRef.current = true;
+      // Only apply if we have actual values to filter by
+      if (additionalFilterValues.some(f => f.value !== undefined && f.value !== null && f.value !== '')) {
+        setTimeout(() => {
+          applyFilters();
+        }, 0);
+      }
+    }
+  }, [additionalFilterValues, setFilter, applyFilters, filterConfig.fields, getFilterValue]);
+
 
   // Calculate default visible columns
   const defaultVisibleColumns =
@@ -313,6 +362,11 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     applyFilters(); // Apply form filters to URL and trigger data fetch
+    
+    // Call onApplyFilters if provided
+    if (onApplyFilters) {
+      onApplyFilters();
+    }
   };
 
   // Handle page change
@@ -389,6 +443,11 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
   // Clear all filters
   const clearFilters = () => {
     clearAllFilters(); // This will also trigger data fetch
+
+    // Call onApplyFilters if provided
+    if (onApplyFilters) {
+      onApplyFilters();
+    }
   };
 
   // Calculate pagination values

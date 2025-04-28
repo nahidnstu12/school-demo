@@ -1,66 +1,80 @@
-'use client';
+import React from "react";
+import { useFormContext, Controller } from "react-hook-form";
+import { Input } from "@heroui/react";
 
-import { Input } from '@heroui/input';
-import { Controller, useFormContext } from 'react-hook-form';
-
-type FormInputProps = {
+interface FormInputProps {
   name: string;
   label: string;
-  type?: string;
   placeholder?: string;
+  type?: string;
+  isRequired?: boolean;
+  isDisabled?: boolean;
+  className?: string;
+  onValueChange?: (value: string) => void;
   description?: string;
-  required?: boolean;
-};
+}
 
-export const FormInput = ({
+export function FormInput({
   name,
   label,
-  type = 'text',
   placeholder,
+  type = "text",
+  isRequired = false,
+  isDisabled = false,
+  className = "",
+  onValueChange,
   description,
-  required = false,
-}: FormInputProps) => {
-  const {
-    control,
-    formState: { errors, isSubmitted },
+}: FormInputProps) {
+  const { 
+    control, 
+    formState: { errors } 
   } = useFormContext();
-  const errorMessage = errors[name]?.message?.toString();
-  if (errorMessage) console.log({ name, errorMessage });
-
-  console.log({
-    name,
-    hasError: !!errors[name],
-    errorMessage,
-    isSubmitted,
-    allErrors: errors,
-  });
-
+  
+  // Get server errors if they exist (assuming they are stored in form context)
+  const getServerErrors = (fieldName: string): string[] | undefined => {
+    const serverErrors = (errors as any)?.serverErrors;
+    if (serverErrors && Array.isArray(serverErrors)) {
+      const fieldErrors = serverErrors
+        .filter((error: any) => error.field === fieldName)
+        .map((error: any) => error.message);
+      
+      return fieldErrors.length > 0 ? fieldErrors : undefined;
+    }
+    return undefined;
+  };
+  
   return (
-    <div className="w-full space-y-1">
+    <div>
       <Controller
         name={name}
         control={control}
         render={({ field }) => (
-          <>
-            <Input
-              {...field}
-              color={errorMessage ? 'danger' : 'default'}
-              variant="bordered"
-              labelPlacement="outside"
-              size="sm"
-              isRequired={required}
-              label={label}
-              placeholder={placeholder}
-              type={type}
-              isInvalid={!!errorMessage}
-              errorMessage={errorMessage}
-              description={description}
-            />
-            {/* Display error even if component doesn't handle it */}
-            {/* {errorMessage && <FormErrorMessage errorMessage={errorMessage} />} */}
-          </>
+          <Input
+            {...field}
+            name={name}
+            type={type}
+            label={label}
+            placeholder={placeholder}
+            isDisabled={isDisabled}
+            isRequired={isRequired}
+            isInvalid={!!errors[name] || !!getServerErrors(name)}
+            errorMessage={
+              errors[name]?.message as string || 
+              getServerErrors(name)?.join(", ")
+            }
+            className={`w-full ${className}`}
+            onValueChange={(value) => {
+              field.onChange(value);
+              if (onValueChange) {
+                onValueChange(value);
+              }
+            }}
+          />
         )}
       />
+      {description && (
+        <div className="mt-1 text-xs text-gray-500">{description}</div>
+      )}
     </div>
   );
-};
+}

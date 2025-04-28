@@ -1,74 +1,86 @@
-// src/components/forms/FormContainer.tsx
-import React, { ReactNode } from 'react';
-import { FormProvider, UseFormReturn } from 'react-hook-form';
-import { FormActions } from './FormActions';
+// components/ui/form/FormProvider.tsx
+import React from "react";
+import { FormProvider as RHFFormProvider, UseFormReturn, FieldValues } from "react-hook-form";
+import { Button, Spinner } from "@heroui/react";
 
-type FormContainerProps<T extends Record<string, any>> = {
-  formMethods: UseFormReturn<T>;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  children: ReactNode;
-  isSubmitting?: boolean;
-  rootError?: string | null;
-  successMessage?: string | null;
-  showDebug?: boolean;
+interface FormProviderProps<T extends FieldValues> {
+  methods: UseFormReturn<T>;
+  onSubmit: (data: T) => void;
+  children: React.ReactNode;
+  submitText?: string;
+  isReadOnly?: boolean;
+  isPending?: boolean;
   className?: string;
-};
+  serverErrors?: Array<{ field: string | number; message: string }>;
+  showSuccessMessage?: boolean;
+  successMessage?: string;
+}
 
-/**
- * Reusable form container component
- */
-export function FormContainer<T extends Record<string, any>>({
-  formMethods,
+export function FormProvider<T extends FieldValues>({
+  methods,
   onSubmit,
   children,
-  isSubmitting = false,
-  rootError = null,
-  successMessage = null,
-  showDebug = false,
-  className = 'space-y-4',
-}: FormContainerProps<T>) {
+  submitText = "Submit",
+  isReadOnly = false,
+  isPending = false,
+  className = "",
+  serverErrors = [],
+  showSuccessMessage = false,
+  successMessage = "Operation completed successfully",
+}: FormProviderProps<T>) {
+  // Enhance the errors state with server errors
+  const enhancedMethods = {
+    ...methods,
+    formState: {
+      ...methods.formState,
+      serverErrors: serverErrors,
+    },
+  };
+  
+  // Extract form-level errors (non-field specific)
+  const formErrors = serverErrors.filter(
+    (error) => 
+      error.field === "root" || 
+      error.field === "unknown" || 
+      typeof error.field === "number"
+  );
+  
   return (
-    <>
-      {/* Success message */}
-      {successMessage && (
-        <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
-          {successMessage}
-        </div>
-      )}
-
-      {/* Root error message */}
-      {rootError && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {rootError}
-        </div>
-      )}
-
-      {/* Form */}
-      <FormProvider {...formMethods}>
-        <form
-          onSubmit={onSubmit}
-          className={className}
-          noValidate // Prevent browser validation
-        >
-          {/* Form fields */}
-          {children}
-
-          <FormActions isSubmitting={isSubmitting} resetForm={() => formMethods.reset()} />
-          {/* Debug section - shows validation errors */}
-          {showDebug && Object.keys(formMethods.formState.errors).length > 0 && (
-            <div className="mt-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded">
-              <h3 className="font-bold">Validation Issues:</h3>
-              <ul className="list-disc pl-5">
-                {Object.entries(formMethods.formState.errors).map(([field, error]) => (
-                  <li key={field}>
-                    {field}: {error?.message?.toString()}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </form>
-      </FormProvider>
-    </>
+    <RHFFormProvider {...enhancedMethods}>
+      <form onSubmit={methods.handleSubmit(onSubmit)} className={`space-y-6 ${className}`}>
+        {/* Form-level errors */}
+        {formErrors.length > 0 && (
+          <div className="p-3 mb-4 text-sm text-white bg-red-500 rounded-md">
+            {formErrors.map((error, index) => (
+              <div key={index}>{error.message}</div>
+            ))}
+          </div>
+        )}
+        
+        {/* Form fields */}
+        {children}
+        
+        {/* Submit Button - Hidden in read-only mode */}
+        {!isReadOnly && (
+          <div className="flex justify-end">
+            <Button 
+              type="submit" 
+              color="primary" 
+              isLoading={isPending} 
+              isDisabled={isPending}
+            >
+              {submitText}
+            </Button>
+          </div>
+        )}
+        
+        {/* Success message */}
+        {showSuccessMessage && (
+          <div className="p-3 mt-4 text-green-700 bg-green-100 rounded-md">
+            {successMessage}
+          </div>
+        )}
+      </form>
+    </RHFFormProvider>
   );
 }

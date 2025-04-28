@@ -1,25 +1,29 @@
-// components/ui/form/FormCheckbox.tsx
+// components/ui/form/FormTextarea.tsx
 import React from "react";
 import { useFormContext, Controller } from "react-hook-form";
-import { Checkbox } from "@heroui/react";
+import { Textarea } from "@heroui/react";
 
-interface FormCheckboxProps {
+interface FormTextareaProps {
   name: string;
   label: string;
+  placeholder?: string;
+  isRequired?: boolean;
   isDisabled?: boolean;
   className?: string;
   description?: string;
-  value?: string;
+  rows?: number;
 }
 
-export function FormCheckbox({
+export function FormTextarea({
   name,
   label,
+  placeholder,
+  isRequired = false,
   isDisabled = false,
   className = "",
   description,
-  value = "on",
-}: FormCheckboxProps) {
+  rows,
+}: FormTextareaProps) {
   const { 
     control, 
     formState: { errors } 
@@ -39,30 +43,28 @@ export function FormCheckbox({
   };
   
   return (
-    <div className={className}>
+    <div>
       <Controller
         name={name}
         control={control}
-        render={({ field: { value: fieldValue, onChange, ...field } }) => (
-          <Checkbox
+        render={({ field }) => (
+          <Textarea
             {...field}
-            value={value}
             name={name}
-            isSelected={fieldValue}
-            onValueChange={onChange}
+            label={label}
+            placeholder={placeholder}
             isDisabled={isDisabled}
-          >
-            {label}
-          </Checkbox>
+            isRequired={isRequired}
+            isInvalid={!!errors[name] || !!getServerErrors(name)}
+            errorMessage={
+              errors[name]?.message as string || 
+              getServerErrors(name)?.join(", ")
+            }
+            className={`w-full ${className}`}
+            rows={rows}
+          />
         )}
       />
-      
-      {(errors[name] || getServerErrors(name)) && (
-        <div className="mt-1 text-xs text-red-500">
-          {errors[name]?.message as string || getServerErrors(name)?.join(", ")}
-        </div>
-      )}
-      
       {description && (
         <div className="mt-1 text-xs text-gray-500">{description}</div>
       )}

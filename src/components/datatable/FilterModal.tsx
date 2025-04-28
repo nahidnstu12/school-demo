@@ -105,6 +105,7 @@ export default function FilterModal({
     // Forward to parent handler
     handleInputChange(e);
   };
+  
 
   // Handle date change
   const handleDateChange = (value: CalendarDate | null, name: string) => {
@@ -328,6 +329,7 @@ export default function FilterModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {/* Filter Fields */}
                   {filterableColumns.map((column) => {
+                    
                     if (column.key === 'search') return null; // Skip search as we have a separate field for it
                     
                     const fieldConfig = filterConfig.fields[column.key];
@@ -336,7 +338,7 @@ export default function FilterModal({
                     // Get values from local state or fall back to getFilterValue
                     const filterValue = getCurrentValue(column.key);
                     const dateRange = filterValue && typeof filterValue === 'object' ? filterValue : { min: '', max: '' };
-                    
+
                     switch (column.filterType) {
                       case 'select':
                         return (

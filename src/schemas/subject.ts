@@ -55,8 +55,10 @@ export const subjectFilterConfig: FilterConfig = {
   defaultSort: { field: 'createdAt', direction: 'desc' as const },
   fields: {
     name: { type: 'string', defaultOperator: 'contains' },
+    code: { type: 'string', defaultOperator: 'contains' },
     institutionId: { type: 'string', defaultOperator: 'equals' },
     levelId: { type: 'string', defaultOperator: 'equals' },
     status: { type: 'boolean', defaultOperator: 'equals' },
+    createdAt: { type: 'date', defaultOperator: 'equals' },
   },
 };

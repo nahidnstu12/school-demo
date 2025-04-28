@@ -1,25 +1,33 @@
-// components/ui/form/FormCheckbox.tsx
+// components/ui/form/FormNumberInput.tsx
 import React from "react";
 import { useFormContext, Controller } from "react-hook-form";
-import { Checkbox } from "@heroui/react";
+import { Input } from "@heroui/react";
 
-interface FormCheckboxProps {
+interface FormNumberInputProps {
   name: string;
   label: string;
+  placeholder?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  isRequired?: boolean;
   isDisabled?: boolean;
   className?: string;
   description?: string;
-  value?: string;
 }
 
-export function FormCheckbox({
+export function FormNumberInput({
   name,
   label,
+  placeholder,
+  min,
+  max,
+  step = 1,
+  isRequired = false,
   isDisabled = false,
   className = "",
   description,
-  value = "on",
-}: FormCheckboxProps) {
+}: FormNumberInputProps) {
   const { 
     control, 
     formState: { errors } 
@@ -39,30 +47,33 @@ export function FormCheckbox({
   };
   
   return (
-    <div className={className}>
+    <div>
       <Controller
         name={name}
         control={control}
-        render={({ field: { value: fieldValue, onChange, ...field } }) => (
-          <Checkbox
+        render={({ field: { onChange, value, ...field } }) => (
+          <Input
             {...field}
-            value={value}
             name={name}
-            isSelected={fieldValue}
-            onValueChange={onChange}
+            type="number"
+            value={value?.toString() || "0"}
+            onValueChange={(val) => onChange(Number(val))}
+            label={label}
+            placeholder={placeholder}
+            min={min}
+            max={max}
+            step={step}
             isDisabled={isDisabled}
-          >
-            {label}
-          </Checkbox>
+            isRequired={isRequired}
+            isInvalid={!!errors[name] || !!getServerErrors(name)}
+            errorMessage={
+              errors[name]?.message as string || 
+              getServerErrors(name)?.join(", ")
+            }
+            className={`w-full ${className}`}
+          />
         )}
       />
-      
-      {(errors[name] || getServerErrors(name)) && (
-        <div className="mt-1 text-xs text-red-500">
-          {errors[name]?.message as string || getServerErrors(name)?.join(", ")}
-        </div>
-      )}
-      
       {description && (
         <div className="mt-1 text-xs text-gray-500">{description}</div>
       )}

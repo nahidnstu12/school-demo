@@ -7,13 +7,13 @@ import { DataTable } from '@/components/datatable';
 import { DataTableColumn } from '@/components/datatable/types';
 import SubjectDrawer from '@/components/modules/subject/Drawer';
 import useTeacherDrawer from '@/hooks/useDrawer';
-import { useDynamicFilters } from '@/hooks/useDynamicFilter';
 import { subjectFilterConfig } from '@/schemas/subject';
-import { Button, Chip, Input } from '@heroui/react';
+import { Button, Chip, DatePicker, Input } from '@heroui/react';
+import { CalendarDate, getLocalTimeZone } from "@internationalized/date";
 import { Level } from '@prisma/client';
 import { Edit, Eye, Trash } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Define subject type with necessary fields for display
 interface ISubject {
@@ -26,6 +26,14 @@ interface ISubject {
   creditHours?: number;
   institutionName?: string;
   levelName?: string;
+  createdAt?: Date;
+}
+
+// Define the structure for additional filter values
+interface AdditionalFilterValue {
+  field: string;
+  operator?: string;
+  value: any;
 }
 
 export default function SubjectList() {
@@ -37,54 +45,136 @@ export default function SubjectList() {
   const [levels, setLevels] = useState<Level[]>([]);
   const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
   
+  // State for additional filter values
+  const [nameFilter, setNameFilter] = useState<string>('');
+  const [createdDateFilter, setCreatedDateFilter] = useState<CalendarDate | null>(null);
+  
+  // Initialize additional filters from URL parameters
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    // Initialize name filter from URL
+    const nameParam = searchParams.get('name');
+    if (nameParam !== null) {
+      setNameFilter(nameParam);
+    }
+    
+    // Initialize date filter from URL
+    const dateParam = searchParams.get('createdAt');
+    if (dateParam) {
+      try {
+        const date = new Date(dateParam);
+        setCreatedDateFilter(new CalendarDate(
+          date.getFullYear(),
+          date.getMonth() + 1,
+          date.getDate()
+        ));
+      } catch (e) {
+        console.error("Error parsing date from URL:", e);
+      }
+    }
+  }, []);
+
   // Reference to the DataTable's refetch function
   const dataTableRef = useRef<{
     refetchData: () => void;
   } | null>(null);
 
-  const { getFilterValue, setFilter } = useDynamicFilters(subjectFilterConfig);
+  // Create and maintain a collection of additional filter values
+  const [additionalFilterValues, setAdditionalFilterValues] = useState<AdditionalFilterValue[]>([]);
+  
+  // Update additional filter values whenever their state changes
+  useEffect(() => {
+    const newFilterValues: AdditionalFilterValue[] = [];
+    
+    // Add name filter if it has value (including empty string)
+    if (nameFilter !== undefined) {
+      newFilterValues.push({
+        field: 'name',
+        operator: 'contains',
+        value: nameFilter
+      });
+    }
+    
+    // Add date filter if it has value
+    if (createdDateFilter !== undefined) {
+      try {
+        // Handle null/empty date
+        if (!createdDateFilter) {
+          newFilterValues.push({
+            field: 'createdAt',
+            operator: 'equals',
+            value: ''
+          });
+        } else {
+          // Convert CalendarDate to ISO string
+          const date = createdDateFilter.toDate(getLocalTimeZone());
+          
+          // Set the time to noon to prevent timezone issues
+          const adjustedDate = new Date(
+            date.getFullYear(),
+            date.getMonth(),
+            date.getDate(),
+            12, 0, 0
+          );
+          
+          // Create ISO string
+          const dateString = adjustedDate.toISOString();
+          
+          newFilterValues.push({
+            field: 'createdAt',
+            operator: 'equals',
+            value: dateString
+          });
+        }
+        
+      } catch (e) {
+        console.error("Error converting date:", e);
+      }
+    }
+    
+    // Update the collection of additional filter values
+    setAdditionalFilterValues(newFilterValues);
+  }, [nameFilter, createdDateFilter]);
 
   // Improved handleSuccess callback to actually refresh data
   const handleSuccess = useCallback(() => {
     console.log('Subject saved successfully, refreshing data...');
     
-    // Option 2: If you implemented a ref-based approach with the DataTable
     if (dataTableRef.current) {
       dataTableRef.current.refetchData();
     }
     
-    // Close the drawer after success
     closeDrawer();
   }, [closeDrawer]);
 
-  // Fetch designations and institutions on mount
+  // Fetch institutions on mount
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        // Fetch institutions
         const institutionsResult = await getAllInstitutions();
         if (institutionsResult.success) {
           setInstitutions(institutionsResult.data);
         }
       } catch (error) {
-        console.error('Error fetching metadata:', error);
+        console.error('Error fetching institutions:', error);
       }
     };
 
     fetchMetadata();
   }, []);
 
+  // Fetch levels when institutionId changes
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        // Fetch levels
         const filters = institutionId ? { where: { institutionId } } : null;
         const levelsResult = await getAllLevels(filters);
         if (levelsResult.success) {
           setLevels(levelsResult.data);
         }
       } catch (error) {
-        console.error('Error fetching metadata:', error);
+        console.error('Error fetching levels:', error);
       }
     };
 
@@ -97,23 +187,29 @@ export default function SubjectList() {
   }, [openDrawer]);
 
   const handleDelete = useCallback((id: string) => {
-    // Implement delete logic or confirmation dialog
     console.log('Delete subject', id);
   }, []);
 
-  // Define columns for the table with all cell rendering logic
+  // Define columns for the table
   const columns: DataTableColumn<ISubject>[] = [
     {
       key: 'name',
       header: 'Name',
       sortable: true,
-      filterable: false, // Keep this false as requested
+      filterable: false, // Keep as false because we're using additional filter
       filterType: 'text',
       cell: (subject: ISubject) => (
         <div className="flex flex-col">
           <p className="text-bold text-small">{subject.name}</p>
         </div>
       ),
+    },
+    {
+      key: 'code',
+      header: 'Code',
+      filterable: true,
+      filterType: 'text',
+      cell: (subject: ISubject) => subject.code || 'N/A',
     },
     {
       key: 'institutionId',
@@ -124,14 +220,6 @@ export default function SubjectList() {
       filterType: 'select',
       filterOptions: institutions.map((inst) => ({ label: inst.name, value: inst.id })),
     },
-
-    {
-      key: 'code',
-      header: 'Code',
-      filterable: true,
-      filterType: 'text',
-      cell: (subject: ISubject) => subject.code || 'N/A',
-    },
     {
       key: 'levelId',
       header: 'Level',
@@ -141,7 +229,6 @@ export default function SubjectList() {
       filterOptions: levels.map((l) => ({ label: l.name, value: l.id })),
       cell: (subject: ISubject) => subject.levelName,
     },
-
     {
       key: 'status',
       header: 'Status',
@@ -163,7 +250,15 @@ export default function SubjectList() {
         </Chip>
       ),
     },
-
+    {
+      key: 'createdAt',
+      header: 'Created Date',
+      sortable: true,
+      filterable: false, // Keep as false because we're using additional filter
+      filterType: 'date',
+      cell: (subject: ISubject) => subject.createdAt ? 
+        new Date(subject.createdAt).toLocaleDateString() : 'N/A',
+    },
     {
       key: 'actions',
       header: 'Actions',
@@ -201,24 +296,75 @@ export default function SubjectList() {
 
   const handleInstitutionChange = (value: string) => {
     setInstitutionId(value);
-    setFilter('institutionId', 'equals', value);
   };
 
-  // Input change handler for additional filters
-  // This only updates the filter state but doesn't apply it immediately
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    
-    console.log(`Setting filter ${name} to ${value}`);
-    
-    // Set the filter but don't apply it yet
-    // It will be applied when the filter modal applies filters
-    setFilter(
-      name,
-      subjectFilterConfig.fields[name]?.defaultOperator || 'contains',
-      value
-    );
+  // Handle name filter change
+  const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNameFilter(e.target.value);
   };
+
+  // Handle date filter change
+  const handleDateFilterChange = (date: CalendarDate | null) => {
+    setCreatedDateFilter(date);
+  };
+
+  // Handle filter application
+  const handleApplyFilters = () => {
+    // Update URL with current filter values
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    // Update name filter in URL
+    if (nameFilter) {
+      searchParams.set('name', nameFilter);
+    } else {
+      searchParams.delete('name');
+    }
+    
+    // Update date filter in URL
+    if (createdDateFilter) {
+      const date = createdDateFilter.toDate(getLocalTimeZone());
+      const adjustedDate = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        12, 0, 0
+      );
+      searchParams.set('createdAt', adjustedDate.toISOString());
+    } else {
+      searchParams.delete('createdAt');
+    }
+    
+    // Update the URL without triggering a page reload
+    const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
+    window.history.pushState({}, '', newUrl);
+  };
+
+  // Create additional filters to be rendered inside the DataTable component
+  const additionalFilters = [
+    // Name filter
+    <Input
+      key="name-filter"
+      type="text"
+      label="Name"
+      labelPlacement="outside"
+      name="name"
+      placeholder="Filter by name..."
+      variant="bordered"
+      value={nameFilter}
+      onChange={handleNameFilterChange}
+    />,
+    
+    // Created date filter
+    <DatePicker
+      key="created-date-filter"
+      label="Created Date"
+      labelPlacement="outside"
+      name="createdAt"
+      variant="bordered"
+      value={createdDateFilter}
+      onChange={handleDateFilterChange}
+    />
+  ];
 
   return (
     <div className="container mx-auto p-4">
@@ -233,7 +379,7 @@ export default function SubjectList() {
           'status',
           'institutionId',
           'levelId',
-          'creditHours',
+          'createdAt',
           'actions',
         ]}
         onAddNew={handleAddNew}
@@ -248,21 +394,11 @@ export default function SubjectList() {
             onParentChange: handleInstitutionChange
           }
         ]}
-        additionalFilters={[
-          <Input
-            key="name-filter"
-            type="text"
-            aria-label="Name"
-            // label="Name"
-            // labelPlacement="outside"
-            name="name"
-            placeholder="Filter by name..."
-            value={getFilterValue('name') || ''}
-            onChange={handleInputChange}
-            variant="bordered"
-          />
-        ]}
+        additionalFilters={additionalFilters}
+        additionalFilterValues={additionalFilterValues}
+        onApplyFilters={handleApplyFilters}
       />
+      
       <SubjectDrawer
         isOpen={isOpen}
         onClose={closeDrawer}
