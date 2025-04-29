@@ -7,20 +7,20 @@ import { useActionState } from "react";
 import { Spinner } from "@heroui/react";
 
 // Import server actions and types
-import { createSubject, getSubjectById, updateSubject } from "@/actions/subject.action";
-import { getAllInstitutions } from "@/actions/institution.action";
-import { getAllLevels } from "@/actions/level.action";
-import { ActionResult } from "@/actions/IServerAction";
+import { createSubject, getSubjectById, updateSubject } from "@/backend/actions/subject.action";
+import { getAllInstitutions } from "@/backend/actions/institution.action";
+import { getAllLevels } from "@/backend/actions/level.action";
+import { ActionResult } from "@/backend/actions/IServerAction";
 import { Subject } from "@prisma/client";
 import { subjectSchema } from "@/schemas/subject";
-import { useFormData } from "./useFormData";
-import { useFormOptions } from "./useFormOptions";
 import { FormProvider } from "@/components/forms/FormContainer";
 import { FormInput } from "@/components/forms/FormInput";
 import { FormNumberInput } from "@/components/forms/FormNumberInput";
 import { FormTextarea } from "@/components/forms/FormTextarea";
 import { FormSelect } from "@/components/forms/FormSelect";
 import { FormCheckbox } from "@/components/forms/FormCheckbox";
+import { useFormData } from '@/hooks/useFormData';
+import { useFormOptions } from '@/hooks/useFormOptions';
 
 export type DrawerMode = "create" | "read" | "edit";
 

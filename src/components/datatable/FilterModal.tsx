@@ -356,15 +356,16 @@ export default function FilterModal({
                               aria-label={`Filter by ${column.header}`}
                             >
                               <SelectItem key="" textValue="All">All</SelectItem>
-                              {(column.filterOptions || []).map((option) => (
-                                <SelectItem 
-                                  key={String(option.value)} 
-                                  textValue={option.label}
-                                  // value={String(option.value)}
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
+                              <>
+                                {(column.filterOptions || []).map((option) => (
+                                  <SelectItem 
+                                    key={String(option.value)} 
+                                    textValue={option.label}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </>
                             </Select>
                           </div>
                         );

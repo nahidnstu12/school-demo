@@ -1,7 +1,7 @@
 'use client';
 
-import { ActionResult } from '@/actions/IServerAction';
-import { createTeacher, updateTeacher } from '@/actions/teacher.action';
+import { ActionResult } from '@/backend/actions/IServerAction';
+import { createTeacher } from '@/backend/actions/teacher.action';
 import {
   Button,
   Checkbox,
@@ -187,7 +187,7 @@ export default function TeacherFormWithAction({
 
     // Handle boolean conversion for status
     const statusValue = formData.get('status');
-    const boolValue = statusValue === 'on' || statusValue === 'true' || statusValue === true;
+    const boolValue = statusValue === 'on' || statusValue === 'true';
     cleanedFormData.append('status', boolValue.toString());
 
     // For debugging - log what we're sending to the server

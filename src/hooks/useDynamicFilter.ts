@@ -208,7 +208,8 @@ export function useDynamicFilters(config: FilterConfig) {
 
       // Update URL
       router.push(`?${urlString}`, { scroll: false });
-
+      
+      console.log('urlString>>', urlString);
       // Return the URL for potential synchronous usage
       return urlString;
     },

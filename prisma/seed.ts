@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, NoticeType } from '@prisma/client';
+import { PrismaClient, UserRoleEnum } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { mockproducts, mockTeachers } from './fakerData';
@@ -77,7 +77,7 @@ async function main() {
       lastName: 'User',
       email: 'admin@example.com',
       password: await hash('password123', 12),
-      role: UserRole.ADMIN,
+      role: UserRoleEnum.ADMIN,
       phone: '+1234567890',
       status: true,
     },
@@ -85,12 +85,23 @@ async function main() {
   console.log('Admin user created:', adminUser.email);
 
   // Create 10 Institutions
-  console.log('Creating 10 institutions...');
+  console.log('Creating 5 institutions...');
   const institutions = await Promise.all(
-    Array.from({ length: 10 }).map(async (_, index) => {
+    Array.from({ length: 5 }).map(async (_, index) => {
+      const user = await prisma.user.create({
+        data: {
+          firstName: "Institution",
+          lastName: `${index + 1}`,
+          email: `institution${index + 1}@example.com`,
+          password: await hash('password123', 12),
+          role: UserRoleEnum.ADMIN,
+          phone: `+1234567890${index}`,
+          status: true,
+        },
+      });
       return prisma.institution.create({
         data: {
-          userId: adminUser.id,
+          userId: user.id,
           uuid: uuidv4(),
           name: `Institution ${index + 1}`,
           location: `Address ${index + 1}`,
@@ -127,7 +138,7 @@ async function main() {
             lastName: teacherData.lastName,
             email: teacherData.email,
             password: await hash('password123', 12),
-            role: UserRole.TEACHER,
+            role: UserRoleEnum.TEACHER,
             phone: teacherData.phone,
             status: true,
           },
@@ -143,6 +154,7 @@ async function main() {
             address: teacherData.address,
             district: teacherData.district,
             status: teacherData.status,
+            pdsId: teacherData.pds_id,
             // extraInfos: {
             //   education: teacherData.education,
             //   certifications: teacherData.certifications,
@@ -214,7 +226,7 @@ async function main() {
     console.log('Creating subjects...');
     const subjects = await Promise.all(
       levels.flatMap((level, levelIndex) =>
-        Array.from({ length: 6 }).map((_, index) => {
+        Array.from({ length: 3 }).map((_, index) => {
           // Create a unique code using institution ID, level index, and subject index
           const uniqueCode = `SUB-${institution.id.substring(0, 3)}-L${levelIndex + 1}-S${index + 1}`;
           
@@ -264,7 +276,7 @@ async function main() {
             lastName: `${index + 1}-Inst${instIndex + 1}`,
             email: `student${index + 1}_inst${instIndex + 1}@example.com`,
             password: await hash('password123', 12),
-            role: UserRole.STUDENT,
+            role: UserRoleEnum.STUDENT,
             phone: `+1555${String(index).padStart(4, '0')}`,
             status: true,
           },
@@ -367,7 +379,7 @@ async function main() {
         sku: product.sku,
         featured: product.featured,
         tags: product.tags,
-        deleted: false
+        deletedAt: null
       }
     });
 

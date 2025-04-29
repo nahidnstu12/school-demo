@@ -11,18 +11,18 @@ export const levelSchema = z.object({
 
   hasShift: z
     .union([z.boolean(), z.string().transform((val) => val === 'true')])
-    .optional()
-    .default(false),
+    .default(false)
+    .transform((val) => Boolean(val)),
 
   hasGroup: z
     .union([z.boolean(), z.string().transform((val) => val === 'true')])
-    .optional()
-    .default(false),
+    .default(false)
+    .transform((val) => Boolean(val)),
 
   hasSection: z
     .union([z.boolean(), z.string().transform((val) => val === 'true')])
-    .optional()
-    .default(false),
+    .default(false)
+    .transform((val) => Boolean(val)),
 });
 
 export type LevelSchemaType = z.infer<typeof levelSchema>;

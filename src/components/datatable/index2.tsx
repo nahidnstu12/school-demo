@@ -669,7 +669,7 @@ import {
   SortDescriptor,
 } from '@heroui/react';
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActionResult } from '@/actions/IServerAction';
+import { ActionResult } from '@/backend/actions/IServerAction';
 import { useDynamicFilters } from '@/hooks/useDynamicFilter';
 import { FilterConfig } from '@/utils/filter-helpers';
 

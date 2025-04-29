@@ -11,7 +11,7 @@ import {
   SortDescriptor,
 } from '@heroui/react';
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import { ActionResult } from '@/actions/IServerAction';
+import { ActionResult } from '@/backend/actions/IServerAction';
 import { useDynamicFilters } from '@/hooks/useDynamicFilter';
 import { FilterConfig, FilterOperator } from '@/utils/filter-helpers';
 
@@ -46,7 +46,8 @@ interface DataTableProps<T> {
   additionalFilters?: React.ReactNode[];
   additionalFilterValues?: AdditionalFilterValue[];
   title?: string;
-  onApplyFilters?: () => void;  
+  onApplyFilters?: () => void;
+  onClearFilters?: () => void;
 }
 
 // Define the DataTable ref interface
@@ -69,6 +70,7 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
     additionalFilterValues = [],
     title,
     onApplyFilters,
+    onClearFilters,
   }: DataTableProps<T>,
   ref: React.ForwardedRef<DataTableRef>
 ) {
@@ -444,10 +446,18 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
   const clearFilters = () => {
     clearAllFilters(); // This will also trigger data fetch
 
-    // Call onApplyFilters if provided
-    if (onApplyFilters) {
-      onApplyFilters();
+    // // Call onApplyFilters if provided
+    // if (onApplyFilters) {
+    //   onApplyFilters();
+    // }
+
+    // Call onClearFilters if provided
+    if (onClearFilters) {
+      onClearFilters();
     }
+
+    // Clear additional filters by triggering a refetch
+    setRefreshToken(prev => prev + 1);
   };
 
   // Calculate pagination values

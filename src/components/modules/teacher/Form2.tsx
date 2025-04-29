@@ -3,7 +3,7 @@
 import { useEffect, startTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useActionState } from "react-use-action-state";
+import { useActionState } from "react";
 
 // Import reusable form components
 import { 
@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/form";
 
 // Import server actions and types
-import { createTeacher, updateTeacher } from "@/actions/teacher.action";
-import { ActionResult } from "@/actions/IServerAction";
+import { createTeacher, updateTeacher } from "@/backend/actions/teacher.action";
+import { ActionResult } from "@/backend/actions/IServerAction";
 import { Teacher } from "@prisma/client";
 import { teacherSchema, TeacherData } from "@/schemas/teacher";
 

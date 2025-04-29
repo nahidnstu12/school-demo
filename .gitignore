@@ -1,4 +1,5 @@
 prisma/migrations/
+prisma/generated/
 
 /node_modules
 /.pnp

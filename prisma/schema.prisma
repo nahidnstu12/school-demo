@@ -1,0 +1,885 @@
+// -----------------------------------------------------------------------------
+// PRISMA CONFIGURATION
+// -----------------------------------------------------------------------------
+
+generator client {
+  provider      = "prisma-client-js"
+  // output   = "./generated/client"
+}
+
+// PostgreSQL database connection configuration
+datasource db {
+  provider = "postgresql" // Changed from MySQL to PostgreSQL
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
+// Default roles in the system
+enum UserRoleEnum {
+  SUPER_ADMIN  // System-wide administrator
+  ADMIN        // Institution-level administrator
+  TEACHER      // Teaching staff
+  STUDENT      // Enrolled student
+  STAFF        // Non-teaching staff
+}
+
+// Permission scopes for different areas of the system
+enum PermissionScope {
+  GLOBAL       // System-wide permissions
+  INSTITUTION  // Institution-specific permissions
+  MODULE       // Module-specific permissions
+  RESOURCE     // Resource-specific permissions
+}
+
+// Types of notices that can be published
+enum NoticeType {
+  GLOBAL   // Visible to everyone
+  TEACHER  // Visible only to teachers
+}
+
+// -----------------------------------------------------------------------------
+// AUDIT & LOGGING
+// -----------------------------------------------------------------------------
+
+/// Activity logs to track system events and user actions
+model ActivityLog {
+  id            String    @id @default(cuid())
+  userId        String?   @map("user_id")          // User who performed the action (optional for system actions)
+  institutionId String?   @map("institution_id")   // Related institution (if applicable)
+  action        String                             // Action performed (e.g., "create", "update", "delete")
+  entityType    String    @map("entity_type")      // Type of entity affected (e.g., "User", "Student")
+  entityId      String    @map("entity_id")        // ID of the affected entity
+  details       Json?                              // Additional details about the action
+  ipAddress     String?   @map("ip_address")       // IP address of the user
+  userAgent     String?   @map("user_agent")       // User agent information
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+  @@index([institutionId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+/// Audit trail for permission changes
+model PermissionLog {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")          // User who made the change
+  targetUserId  String    @map("target_user_id")   // User whose permissions were changed
+  roleId        String?   @map("role_id")          // Role involved (if applicable)
+  permissionId  String?   @map("permission_id")    // Permission involved (if applicable)
+  action        String                             // Action performed (e.g., "grant", "revoke")
+  institutionId String?   @map("institution_id")   // Institution context (if applicable)
+  details       Json?                              // Additional details about the change
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+  @@index([targetUserId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@index([institutionId])
+  @@index([createdAt])
+  @@map("permission_logs")
+}// -----------------------------------------------------------------------------
+// PERMISSION & ROLE MODELS
+// -----------------------------------------------------------------------------
+
+/// Permissions that can be assigned to roles or directly to users
+model Permission {
+  id          String           @id @default(cuid())
+  name        String           @unique // Unique identifier for the permission (e.g., "create:student")
+  displayName String           // Human-readable name (e.g., "Create Student")
+  description String?          // Description of what the permission allows
+  scope       PermissionScope  // The scope of the permission
+  module      String           // System module this permission belongs to (e.g., "students", "courses")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?        // When null, the record is active; when set, the record is considered deleted
+
+  // Relationships
+  roles       RolePermission[] // Many-to-many relationship with Role
+  users       UserPermission[] // Many-to-many relationship with User for direct permissions
+
+  @@index([name])
+  @@index([module])
+  @@index([scope])
+  @@index([deletedAt])
+  @@map("permissions")
+}
+
+/// Custom roles that can be created by institutions
+model Role {
+  id            String          @id @default(cuid())
+  name          String          // Role name (e.g., "Department Head", "Class Teacher")
+  displayName   String          // Human-readable name
+  description   String?         // Description of the role's responsibilities
+  isSystem      Boolean         @default(false) // Whether this is a system role or custom role
+  institutionId String?         @map("institution_id") // Institution this role belongs to (null for system roles)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  deletedAt     DateTime?       // When null, the record is active; when set, the record is considered deleted
+
+  // Relationships
+  permissions   RolePermission[] // Many-to-many relationship with Permission
+  users         UserRole[]      // Many-to-many relationship with User
+  institution   Institution?    @relation(fields: [institutionId], references: [id])
+
+  @@unique([name, institutionId]) // Role names must be unique within an institution
+  @@index([institutionId])
+  @@index([isSystem])
+  @@index([deletedAt])
+  @@map("roles")
+}
+
+/// Junction table for role-permission assignments
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
+  createdAt    DateTime   @default(now())
+  
+  // Relationships
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+/// Junction table for user-role assignments
+model UserRole {
+  id            String       @id @default(cuid())
+  userId        String       @map("user_id")
+  roleId        String       @map("role_id")
+  institutionId String?      @map("institution_id") // Institution context for this role assignment
+  expiresAt     DateTime?    @map("expires_at") // Optional role expiration date
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  // Relationships
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  institution  Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId, institutionId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([institutionId])
+  @@index([expiresAt])
+  @@map("user_roles")
+}
+
+/// Direct permission assignments to users (overrides roles)
+model UserPermission {
+  id            String       @id @default(cuid())
+  userId        String       @map("user_id")
+  permissionId  String       @map("permission_id")
+  institutionId String?      @map("institution_id") // Institution context for this permission
+  granted       Boolean      @default(true) // Whether to grant or deny this permission
+  expiresAt     DateTime?    @map("expires_at") // Optional permission expiration date
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  // Relationships
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission   @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  institution  Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId, institutionId])
+  @@index([userId])
+  @@index([permissionId])
+  @@index([institutionId])
+  @@index([granted])
+  @@index([expiresAt])
+  @@map("user_permissions")
+}// This is your Prisma schema file
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+
+
+
+
+// -----------------------------------------------------------------------------
+// USER & AUTHENTICATION MODELS
+// -----------------------------------------------------------------------------
+
+/// User account information and authentication details
+model User {
+  id              String    @id @default(cuid())
+  avatar          Int?      // Profile picture identifier
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  phone           String?
+  status          Boolean   @default(true) // Account status (active/inactive)
+  email           String    @unique
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  password        String    // Hashed password
+  role            UserRoleEnum  @default(ADMIN)
+  rememberToken   String?   @map("remember_token") // For "remember me" functionality
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? // When null, the record is active; when set, the record is considered deleted
+
+  // Relationships
+  institutions   Institution[]
+  students       Student[]
+  teachers       Teacher[]
+  noticesCreated Notice[]
+  staff          Staff?
+  roles          UserRole[]      // Many-to-many relation with Role model
+  permissions    UserPermission[] // Direct permissions assigned to user
+
+  @@index([email])
+  @@index([role]) // Add index for role to improve filtering by user type
+  @@map("users")
+}
+
+// -----------------------------------------------------------------------------
+// INSTITUTION & ORGANIZATIONAL STRUCTURE MODELS
+// -----------------------------------------------------------------------------
+
+/// Educational institution information
+model Institution {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id") // Owner/admin of the institution
+  uuid           String   @unique @map("uuid") // Public identifier
+  name           String
+  registrationNo String?  @map("registration_no") // Official registration number
+  noOfStudents   Int?     @map("no_of_students") // Current student count
+  noOfTeachers   Int?     @map("no_of_teachers") // Current teacher count
+  type           String   @default("PRIMARY_SCHOOL") // Type of educational institution
+  coverPhoto     String?  @map("cover_photo") // Path to cover photo
+  logo           String?  @map("logo") // Path to logo
+  location       String?
+  contactNumber  String?
+  address        String?
+  status         Boolean  @default(true) // Active/inactive status
+  limit          Int?     // Maximum allowed students/resources
+  extraInfos     Json?    @map("extra_infos") // Additional configurable information
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  deletedAt      DateTime? // Soft delete flag
+
+  // Relationships
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  levels   Level[]
+  students Student[]
+  subjects Subject[]
+  teachers Teacher[]
+  notices  Notice[]
+  staffs   Staff[]
+  roles    Role[]    // Institution-specific roles
+  userRoles UserRole[] // User-role assignments in this institution
+  userPermissions UserPermission[] // Direct user permissions in this institution
+
+  @@index([name])
+  @@index([type]) // Add index for institution type
+  @@index([deletedAt]) // Improve queries that filter out deleted records
+  @@map("institutions")
+}
+
+/// Academic level (grade, standard, year)
+model Level {
+  id            String   @id @default(cuid())
+  institutionId String   @map("institution_id")
+  name          String   // E.g., "Grade 1", "First Year"
+  hasShift      Boolean  @default(false) // Indicates if the level has different shifts
+  hasGroup      Boolean  @default(false) // Indicates if the level has different groups
+  hasSection    Boolean  @default(false) // Indicates if the level has different sections
+  status        Boolean  @default(true)  // Active/inactive status
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  institution    Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  groups         Group[]
+  sections       Section[]
+  shifts         Shift[]
+  students       Student[]
+  subjects       Subject[]
+  teacherAssigns TeacherAssign[]
+  routines       Routine[]
+  notices        Notice[]
+
+  @@unique([institutionId, name])
+  @@index([institutionId])
+  @@index([deletedAt])
+  @@map("levels")
+}
+
+/// Student grouping (e.g., Science, Arts, Commerce)
+model Group {
+  id        String   @id @default(cuid())
+  levelId   String?  @map("level_id")
+  name      String   // Group name
+  status    Boolean  @default(true) // Active/inactive status
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? // Soft delete flag
+
+  // Relationships
+  level    Level?    @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  sections Section[]
+  shifts   Shift[]
+  students Student[]
+  notices  Notice[]
+
+  @@unique([levelId, name])
+  @@index([levelId])
+  @@index([deletedAt])
+  @@map("groups")
+}
+
+/// Classroom or learning section
+model Section {
+  id        String   @id @default(cuid())
+  levelId   String   @map("level_id")
+  groupId   String?  @map("group_id")
+  name      String   // Section name (e.g., "A", "B", "C")
+  status    Boolean  @default(true) // Active/inactive status
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? // Soft delete flag
+
+  // Relationships
+  level          Level           @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  group          Group?          @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  students       Student[]
+  teacherAssigns TeacherAssign[]
+  notices        Notice[]
+
+  @@unique([levelId, name])
+  @@index([levelId])
+  @@index([groupId])
+  @@index([deletedAt])
+  @@map("sections")
+}
+
+/// Time shifts for classes (morning, afternoon, evening)
+model Shift {
+  id        String   @id @default(cuid())
+  levelId   String   @map("level_id")
+  groupId   String?  @map("group_id")
+  name      String   // Shift name (e.g., "Morning", "Afternoon")
+  status    Boolean  @default(true) // Active/inactive status
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? // Soft delete flag
+
+  // Relationships
+  level   Level    @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  group   Group?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  notices Notice[]
+
+  @@unique([levelId, name])
+  @@index([levelId])
+  @@index([groupId])
+  @@index([deletedAt])
+  @@map("shifts")
+}
+
+// -----------------------------------------------------------------------------
+// PEOPLE MODELS (STUDENTS, TEACHERS, STAFF)
+// -----------------------------------------------------------------------------
+
+/// Student enrollment and academic information
+model Student {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id") // Associated user account
+  institutionId String    @map("institution_id")
+  levelId       String    @map("level_id")
+  sectionId     String?   @map("section_id")
+  groupId       String?   @map("group_id")
+  rollNo        String?   @map("roll_no") // Student roll/ID number
+  joiningDate   DateTime? @map("joining_date")
+  address       String?
+  status        Boolean   @default(true) // Active/inactive status
+  extraInfos    Json?     @map("extra_infos") // Additional configurable information
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution Institution            @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  level       Level                  @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  section     Section?               @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  group       Group?                 @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  attendances Attendance[]
+  assignments AssignmentSubmission[]
+  examResults ExamResult[]
+
+  @@unique([institutionId, rollNo])
+  @@index([userId])
+  @@index([institutionId])
+  @@index([levelId])
+  @@index([sectionId])
+  @@index([groupId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("students")
+}
+
+/// Academic subject or course
+model Subject {
+  id            String   @id @default(cuid())
+  institutionId String   @map("institution_id")
+  levelId       String   @map("level_id")
+  name          String   // Subject name
+  code          String?  // Subject code
+  creditHours   Float?   // Credit hours for higher education
+  description   String?
+  status        Boolean  @default(true) // Active/inactive status
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  institution    Institution      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  level          Level            @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  teacherAssigns TeacherAssign[]
+  notices        Notice[]
+  teachers       SubjectTeacher[]
+  assignments    Assignment[]
+  attendances    Attendance[]
+  examResults    ExamResult[]
+  routineSlots   RoutineSlot[]
+
+  @@unique([institutionId, code], name: "subject_code_unique")
+  @@index([institutionId])
+  @@index([levelId])
+  @@index([deletedAt])
+  @@map("subjects")
+}
+
+/// Teacher profile and employment details
+model Teacher {
+  id             String    @id @default(cuid())
+  institutionId  String    @map("institution_id")
+  userId         String    @unique @map("user_id") // Associated user account
+  pdsId          String?   @map("pds_id") // Professional ID number
+  designation    String    // Job title
+  joiningDate    DateTime? @map("joining_date")
+  address        String?
+  district       String?
+  specialization String?   // Area of expertise
+  status         Boolean   @default(true) // Active/inactive status
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? // Soft delete flag
+
+  // Relationships
+  institution    Institution      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teacherAssigns TeacherAssign[]
+  notices        Notice[]
+  subjects       SubjectTeacher[]
+  routineSlots   RoutineSlot[]
+
+  @@index([institutionId])
+  @@index([userId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("teachers")
+}
+
+/// Non-teaching staff profile
+model Staff {
+  id            String    @id @default(cuid())
+  userId        String    @unique @map("user_id") // Associated user account
+  institutionId String    @map("institution_id")
+  designation   String    // Job title
+  joiningDate   DateTime? @map("joining_date")
+  status        Boolean   @default(true) // Active/inactive status
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([userId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("staffs")
+}
+
+// -----------------------------------------------------------------------------
+// COMMUNICATION MODELS
+// -----------------------------------------------------------------------------
+
+/// Announcements and notifications
+model Notice {
+  id            String     @id @default(cuid())
+  institutionId String     @map("institution_id")
+  groupId       String?    @map("group_id")
+  levelId       String?    @map("level_id")
+  subjectId     String?    @map("subject_id")
+  sectionId     String?    @map("section_id")
+  shiftId       String?    @map("shift_id")
+  createdBy     String     @map("created_by") // User who created the notice
+  teacherId     String?    @map("teacher_id") // Specific teacher if targeted
+  status        Boolean    @default(true) // Active/inactive status
+  isPinned      Boolean    @default(false) @map("is_pinned") // Featured/pinned notice
+  title         String?
+  body          String?    @db.Text
+  type          NoticeType @default(GLOBAL)
+  attachment    Int?       // Reference to attached file
+  publishedAt   DateTime   @default(now()) @map("published_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  group       Group?      @relation(fields: [groupId], references: [id])
+  level       Level?      @relation(fields: [levelId], references: [id])
+  subject     Subject?    @relation(fields: [subjectId], references: [id])
+  section     Section?    @relation(fields: [sectionId], references: [id])
+  shift       Shift?      @relation(fields: [shiftId], references: [id])
+  creator     User        @relation(fields: [createdBy], references: [id])
+  teacher     Teacher?    @relation(fields: [teacherId], references: [id])
+
+  @@index([institutionId])
+  @@index([teacherId])
+  @@index([levelId])
+  @@index([type])
+  @@index([publishedAt])
+  @@index([isPinned])
+  @@index([deletedAt])
+  @@map("notices")
+}
+
+// -----------------------------------------------------------------------------
+// ACADEMIC ASSIGNMENT MODELS
+// -----------------------------------------------------------------------------
+
+/// Teacher subject assignments
+model TeacherAssign {
+  id        String   @id @default(cuid())
+  teacherId String   @map("teacher_id")
+  levelId   String   @map("level_id")
+  sectionId String   @map("section_id")
+  subjectId String   @map("subject_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  level   Level   @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  section Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, levelId, sectionId, subjectId], name: "unique_teacher_assignment")
+  @@index([teacherId])
+  @@index([levelId])
+  @@index([sectionId])
+  @@index([subjectId])
+  @@index([deletedAt])
+  @@map("teacher_assigns")
+}
+
+/// Subject-teacher relationship
+model SubjectTeacher {
+  id        String   @id @default(cuid())
+  subjectId String   @map("subject_id")
+  teacherId String   @map("teacher_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, teacherId])
+  @@index([subjectId])
+  @@index([teacherId])
+  @@index([deletedAt])
+  @@map("subject_teachers")
+}
+
+// -----------------------------------------------------------------------------
+// SCHEDULING MODELS
+// -----------------------------------------------------------------------------
+
+/// Class timetable/schedule
+model Routine {
+  id        String   @id @default(cuid())
+  levelId   String   @map("level_id")
+  semester  String?  // Academic term or semester
+  startDate DateTime @map("start_date") // Start date for this schedule
+  endDate   DateTime @map("end_date")   // End date for this schedule
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  level Level         @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  slots RoutineSlot[]
+
+  @@index([levelId])
+  @@index([semester])
+  @@index([startDate, endDate]) // Index for date range queries
+  @@index([deletedAt])
+  @@map("routines")
+}
+
+/// Individual time slot in a schedule
+model RoutineSlot {
+  id        String   @id @default(cuid())
+  routineId String   @map("routine_id")
+  subjectId String   @map("subject_id")
+  teacherId String   @map("teacher_id")
+  dayOfWeek Int      @map("day_of_week") // 1-7 for Monday-Sunday
+  startTime DateTime @map("start_time")  // Time slot start time
+  endTime   DateTime @map("end_time")    // Time slot end time
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([routineId])
+  @@index([subjectId])
+  @@index([teacherId])
+  @@index([dayOfWeek]) // Index for quick filtering by day
+  @@index([startTime, endTime]) // Index for time range queries
+  @@index([deletedAt])
+  @@map("routine_slots")
+}
+
+// -----------------------------------------------------------------------------
+// STUDENT PERFORMANCE MODELS
+// -----------------------------------------------------------------------------
+
+/// Student attendance records
+model Attendance {
+  id        String   @id @default(cuid())
+  subjectId String   @map("subject_id")
+  studentId String   @map("student_id")
+  date      DateTime // Date of attendance record
+  isPresent Boolean  @default(false) @map("is_present") // Present/absent status
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, studentId, date])
+  @@index([subjectId])
+  @@index([studentId])
+  @@index([date]) // Index for quick date filtering
+  @@index([isPresent]) // Index for present/absent stats
+  @@index([deletedAt])
+  @@map("attendances")
+}
+
+/// Homework and projects
+model Assignment {
+  id          String   @id @default(cuid())
+  subjectId   String   @map("subject_id")
+  title       String
+  description String   @db.Text
+  dueDate     DateTime @map("due_date") // Submission deadline
+  totalMarks  Float    @map("total_marks") // Maximum possible score
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  subject     Subject                @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  submissions AssignmentSubmission[]
+
+  @@index([subjectId])
+  @@index([dueDate]) // Index for deadline queries
+  @@index([deletedAt])
+  @@map("assignments")
+}
+
+/// Student assignment submissions
+model AssignmentSubmission {
+  id            String   @id @default(cuid())
+  assignmentId  String   @map("assignment_id")
+  studentId     String   @map("student_id")
+  submissionUrl String   @map("submission_url") // File or document URL
+  marks         Float?   // Awarded score
+  submittedAt   DateTime @default(now()) @map("submitted_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId])
+  @@index([studentId])
+  @@index([submittedAt]) // Index for submission time queries
+  @@index([deletedAt])
+  @@map("assignment_submissions")
+}
+
+/// Exam results and grades
+model ExamResult {
+  id        String   @id @default(cuid())
+  subjectId String   @map("subject_id")
+  studentId String   @map("student_id")
+  examType  String   @map("exam_type") // Midterm, Final, etc.
+  marks     Float    // Raw score
+  grade     String?  // Letter grade or equivalent
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Relationships
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, studentId, examType])
+  @@index([subjectId])
+  @@index([studentId])
+  @@index([examType]) // Index for filtering by exam type
+  @@index([grade]) // Index for grade distribution queries
+  @@index([deletedAt])
+  @@map("exam_results")
+}
+
+// -----------------------------------------------------------------------------
+// MEDIA & ASSET MODELS
+// -----------------------------------------------------------------------------
+
+/// Image storage and management
+model Image {
+  id        String   @id @default(cuid())
+  path      String   // File system path
+  filename  String   // Original filename
+  mimetype  String   // MIME type for proper serving
+  size      Int      // File size in bytes
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt     DateTime? // Soft delete flag
+
+  // Polymorphic Relation fields
+  ownerId   String   // ID of the owning entity
+  ownerType String   // Type of owning entity (e.g., "User", "Institution")
+
+  @@index([ownerId, ownerType]) // Optimized for polymorphic queries
+  @@index([deletedAt])
+  @@map("images")
+}
+
+// -----------------------------------------------------------------------------
+// E-COMMERCE MODELS
+// -----------------------------------------------------------------------------
+
+/// Product catalog items
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  description String?   @db.Text
+  price       Decimal   @db.Decimal(10, 2)
+  category    String
+  stock       Int       @default(0)
+  sku         String    @unique // Stock keeping unit
+  featured    Boolean   @default(false) // Featured product flag
+  tags        Json      // Product tags and attributes
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime? // Timestamp of soft deletion
+
+  // Relationships
+  categoryId String?
+  Category   Category?   @relation(fields: [categoryId], references: [id])
+  reviews    Review[]
+  orderItems OrderItem[]
+
+  @@index([category])
+  @@index([deletedAt])
+  @@index([featured])
+  @@index([price]) // Index for price sorting/filtering
+  @@index([stock]) // Index for inventory management
+  @@map("products")
+}
+
+/// Product categories
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+/// Product reviews and ratings
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      // Numeric rating (e.g., 1-5 stars)
+  content   String?  @db.Text
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  userId    String   // Reference to user who wrote the review
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([userId])
+  @@index([rating]) // Index for rating aggregation
+  @@map("reviews")
+}
+
+/// Line items in orders
+model OrderItem {
+  id        String  @id @default(cuid())
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2) // Price at time of purchase
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  orderId   String  // Reference to parent order
+  order     Order   @relation(fields: [orderId], references: [id])
+
+  @@index([orderId]) // Index for order lookup
+  @@index([productId])
+  @@map("order_items") // Adjusted table name for PostgreSQL naming convention
+}
+
+/// Order record (missing in original schema)
+model Order {
+  id           String    @id @default(cuid())
+  userId       String    // Customer who placed the order
+  totalAmount  Decimal   @db.Decimal(10, 2)
+  status       String    // e.g., "pending", "completed", "cancelled"
+  paymentType  String?   // Payment method used
+  paymentStatus String?  // Payment completion status
+  address      Json?     // Shipping address
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // When null, the record is active; when set, the record is considered deleted
+  
+  // Relationships
+  items        OrderItem[] // Add relation to order items
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt]) // Index for order history
+  @@index([deletedAt]) // Index for filtering active/deleted records
+  @@map("orders")
+}
