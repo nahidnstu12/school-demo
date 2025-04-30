@@ -1,7 +1,7 @@
 'use client';
 
 import { useDynamicFilters } from '@/hooks/useDynamicFilter';
-import React, { FormEvent, useEffect, useRef, useState } from 'react';
+import React, { FormEvent, Suspense, useEffect, useRef, useState } from 'react';
 import {
   getProductCategories,
   getProductsWithFilter,
@@ -43,7 +43,7 @@ interface Product {
   updatedAt?: string;
 }
 
-export default function ProductList() {
+function ProductListContent() {
   // Use the dynamic filters hook for URL persistence
   const {
     prismaFilter,
@@ -449,7 +449,9 @@ export default function ProductList() {
                                 key={index}
                                 className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded"
                               >
-                                {typeof tag === 'string' ? tag : (tag as ProductTag).name || String(tag)}
+                                {typeof tag === 'string'
+                                  ? tag
+                                  : (tag as ProductTag).name || String(tag)}
                               </span>
                             ))
                           : typeof product.tags === 'object'
@@ -570,5 +572,13 @@ export default function ProductList() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ProductList() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <ProductListContent />
+    </Suspense>
   );
 }
