@@ -3,7 +3,7 @@
 import { Prisma } from '@prisma/client';
 
 export type ActionResult<T> =
-  | { success: true; data: T }
+  | { success: true; data: T; errors?: { field: string | number; message: string }[] }
   | { success: false; errors: { field: string | number; message: string }[] };
 
 export interface IServerAction<T, ModelType> {

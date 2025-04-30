@@ -1,5 +1,5 @@
+import { DrawerMode } from '@/components/modules/teacher/Drawer';
 import { useState } from 'react';
-import { DrawerMode } from '@/modules/teacher/Drawer';
 
 export default function useDrawer() {
   const [isOpen, setIsOpen] = useState(false);

@@ -9,7 +9,6 @@ import { z, ZodType } from 'zod';
 import { ActionResult } from './IServerAction';
 import { RelationalFilterConfig, RelationalServerAction } from './relation.action';
 
-
 // Convert the teacherFilterConfig to a RelationalFilterConfig
 const teacherRelationalConfig: RelationalFilterConfig = {
   defaultPageSize: teacherFilterConfig.defaultPageSize,
@@ -75,7 +74,7 @@ class TeacherServerAction extends RelationalServerAction<
       // Parse the form data
       const validated = this.validateFormData(formData);
       console.log('validated action>>', validated);
-      
+
       if (!validated.success) {
         return validated;
       }
@@ -177,5 +176,8 @@ export async function deleteTeacher(id: string | number) {
 }
 
 export async function getTeacherById(id: string | number) {
-  return TeacherActionInstance.getById(id);
+  return TeacherActionInstance.findOne({
+    where: { id },
+    include: { user: true, institution: true },
+  });
 }

@@ -15,13 +15,12 @@ import {
   Select,
   SelectItem,
   Spinner,
-  Textarea
+  Textarea,
 } from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Subject } from '@prisma/client';
 import { startTransition, useActionState, useEffect, useMemo } from 'react';
 import { Controller, FormProvider, useForm } from 'react-hook-form';
-
 
 // Define the subject data type to match the schema
 export type SubjectData = {
@@ -74,7 +73,6 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
 
   const {
     control,
-    handleSubmit,
     reset,
     watch,
     formState: { errors },
@@ -82,8 +80,7 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
 
   const formValues = methods.watch(); // Get all current form values from React Hook Form
 
-  
-  if (Object.keys(errors).length>0) console.log({ errors });
+  if (Object.keys(errors).length > 0) console.log({ errors });
 
   // Configuration for institutions and levels
   const fieldConfig = useMemo(
@@ -120,8 +117,7 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
 
   // For create mode, use createSubject directly
   const [createState, createAction, isCreatePending] = useActionState(createSubject, initialState);
-  
-  
+
   // For update mode, need a special wrapper
   // Creating a wrapper function for updateSubject that matches the useActionState signature
   const wrappedUpdateSubject = (state: ActionResult<Subject>, formData: FormData) => {
@@ -141,32 +137,32 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
 
   // Determine which state and action to use based on mode
   const state = mode === 'edit' ? updateState : createState;
-  // const formAction = mode === 'edit' ? handleSubmit(updateAction) : handleSubmit(createAction);
+  const formAction = mode === 'edit' ? updateAction : createAction;
   const isPending = mode === 'edit' ? isUpdatePending : isCreatePending;
 
-  const onSubmit = (data: SubjectData) => {
-    // Create FormData from the form values
-    const formData = new FormData();
-    
-    // Add all form fields to FormData
-    Object.entries(data).forEach(([key, value]) => {
-      // Handle boolean values specially
-      if (typeof value === 'boolean') {
-        formData.append(key, value ? 'true' : 'false');
-      } else if (value !== null && value !== undefined) {
-        formData.append(key, String(value));
-      }
-    });
-    
-    // Use startTransition to prevent the warning
-    startTransition(() => {
-      if (mode === 'edit') {
-        updateAction(formData);
-      } else {
-        createAction(formData);
-      }
-    });
-  };
+  // const onSubmit = (data: SubjectData) => {
+  //   // Create FormData from the form values
+  //   const formData = new FormData();
+
+  //   // Add all form fields to FormData
+  //   Object.entries(data).forEach(([key, value]) => {
+  //     // Handle boolean values specially
+  //     if (typeof value === 'boolean') {
+  //       formData.append(key, value ? 'true' : 'false');
+  //     } else if (value !== null && value !== undefined) {
+  //       formData.append(key, String(value));
+  //     }
+  //   });
+
+  //   // Use startTransition to prevent the warning
+  //   startTransition(() => {
+  //     if (mode === 'edit') {
+  //       updateAction(formData);
+  //     } else {
+  //       createAction(formData);
+  //     }
+  //   });
+  // };
 
   // Update form values when subjectData changes
   useEffect(() => {
@@ -234,7 +230,7 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
 
   return (
     <FormProvider {...methods}>
-      <form action={handleSubmit(onSubmit)} className="space-y-6">
+      <form action={formAction} className="space-y-6">
         {/* Form-level errors */}
         {formErrors.length > 0 && (
           <div className="p-3 mb-4 text-sm text-white bg-red-500 rounded-md">
@@ -433,18 +429,23 @@ export function SubjectForm({ subjectId, mode, isReadOnly = false, onSuccess }: 
         {/* Submit Button - Hidden in read-only mode */}
         {!isReadOnly && (
           <div className="flex justify-end">
-            <Button type="submit" color="primary" isLoading={isPending} isDisabled={isPending} onPress={()=> {
-               addToast({
-                title: mode === 'edit' ? 'Update Subject Successfully' : 'Create Subject Successfully',
-                color: "success",
-              })
-            }}>
+            <Button
+              type="submit"
+              color="primary"
+              isLoading={isPending}
+              isDisabled={isPending}
+              onPress={() => {
+                addToast({
+                  title:
+                    mode === 'edit' ? 'Update Subject Successfully' : 'Create Subject Successfully',
+                  color: 'success',
+                });
+              }}
+            >
               {mode === 'edit' ? 'Update Subject' : 'Create Subject'}
             </Button>
           </div>
         )}
-
-        
       </form>
     </FormProvider>
   );

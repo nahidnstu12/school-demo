@@ -18,10 +18,45 @@ export const teacherFormSchema = z.object({
   district: z.string().optional(),
   specialization: z.string().optional(),
   status: z.boolean().default(true),
+  teacherId: z.string().optional(), // Added for edit mode
 });
 
 // The form values type
 export type TeacherFormValues = z.infer<typeof teacherFormSchema>;
+
+// Define the User type
+export type UserData = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
+};
+
+// Define the Institution type
+export type InstitutionData = {
+  id: string;
+  name: string;
+};
+
+// Define the Teacher type with nested User and Institution
+export type TeacherWithUser = {
+  id: string;
+  userId: string;
+  user: UserData;
+  institution: InstitutionData;
+  institutionId: string;
+  designation: string;
+  joiningDate: Date | null;
+  address: string | null;
+  district: string | null;
+  specialization: string | null;
+  pdsId: string | null;
+  status: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+};
 
 // The actual Teacher model schema (for reference/validation)
 export const teacherSchema = z.object({

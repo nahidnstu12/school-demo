@@ -1,10 +1,10 @@
 'use server';
 
 import UserService from '@/backend/services/user.service';
-import BaseServerAction from './base.action';
 import { UserFormValues, userSchema } from '@/schemas/user';
-import { Prisma, User, UserRole } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { z } from 'zod';
+import BaseServerAction from './base.action';
 
 /**
  * Server actions for User entity
@@ -21,31 +21,6 @@ class UserServerAction extends BaseServerAction<
     service: UserService = new UserService()
   ) {
     super(schema, service);
-  }
-
-  // You can add user-specific methods here if needed
-  async createWithRole(
-    formData: FormData,
-    defaultRole: UserRole
-  ): Promise<
-    | { success: true; data: User }
-    | { success: false; errors: { field: string | number; message: string }[] }
-  > {
-    const validatedData = this.validateFormData(formData);
-
-    if (!validatedData.success) return validatedData;
-
-    // Add a default role if not provided
-    if (!validatedData.data.role) {
-      validatedData.data.role = defaultRole;
-    }
-
-    try {
-      const result = await this.service.create(validatedData.data as Prisma.UserCreateInput);
-      return { success: true, data: result };
-    } catch (error) {
-      return this.handleServiceError(error);
-    }
   }
 }
 
@@ -71,9 +46,4 @@ export async function getUserById(id: string | number) {
 
 export async function getAllUsers(filters?: Prisma.UserFindManyArgs) {
   return userActionInstance.getAll(filters);
-}
-
-// Export custom functions
-export async function createUserWithRole(formData: FormData, defaultRole: UserRole) {
-  return userActionInstance.createWithRole(formData, defaultRole);
 }

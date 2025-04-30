@@ -2,6 +2,7 @@
 
 import { ActionResult } from '@/backend/actions/IServerAction';
 import { createTeacher } from '@/backend/actions/teacher.action';
+import { TeacherFormValues } from '@/schemas/teacher';
 import {
   Button,
   Checkbox,
@@ -34,23 +35,19 @@ export type TeacherData = {
 };
 
 interface TeacherFormProps {
-  teacherId?: string;
-  defaultValues?: Partial<TeacherData>;
+  defaultValues: Partial<TeacherFormValues>;
   institutions: { id: string; name: string }[];
-  districts?: { id: string; name: string }[];
   designations: string[];
   isReadOnly?: boolean;
-  onSuccess?: () => void;
+  onSubmit?: (data: TeacherFormValues) => void;
 }
 
-export default function TeacherFormWithAction({
-  teacherId,
-  defaultValues = {},
+export default function TeacherForm({
+  defaultValues,
   institutions,
-  districts = [],
   designations,
   isReadOnly = false,
-  onSuccess,
+  onSubmit,
 }: TeacherFormProps) {
   // Initialize action state with correct type
   const initialState: ActionResult<Teacher> = {
@@ -63,10 +60,10 @@ export default function TeacherFormWithAction({
 
   // Handle success state
   useEffect(() => {
-    if (state.success && onSuccess) {
-      onSuccess();
+    if (state.success && onSubmit) {
+      onSubmit(defaultValues as TeacherFormValues);
     }
-  }, [state.success, onSuccess]);
+  }, [state.success, onSubmit, defaultValues]);
 
   // Extract field errors into a more usable format
   const getFieldErrors = (fieldName: string): string[] | undefined => {
@@ -142,66 +139,11 @@ export default function TeacherFormWithAction({
     return value === null || value === undefined ? '' : String(value);
   };
 
-  // Custom onSubmit handler to preprocess form data before submitting
-  const handleSubmit = async (formData: FormData) => {
-    // Create a new FormData to ensure clean data
-    const cleanedFormData = new FormData();
-
-    // Add all form fields explicitly to ensure they exist in the correct format
-    // Required fields
-    cleanedFormData.append('firstName', (formData.get('firstName') as string) || '');
-    cleanedFormData.append('lastName', (formData.get('lastName') as string) || '');
-    cleanedFormData.append('email', (formData.get('email') as string) || '');
-    cleanedFormData.append('phone', (formData.get('phone') as string) || '');
-    cleanedFormData.append('institutionId', (formData.get('institutionId') as string) || '');
-    cleanedFormData.append('designation', (formData.get('designation') as string) || '');
-
-    // Optional fields
-    const pdsId = formData.get('pdsId') as string;
-    if (pdsId) cleanedFormData.append('pdsId', pdsId);
-
-    const district = formData.get('district') as string;
-    if (district) cleanedFormData.append('district', district);
-
-    const address = formData.get('address') as string;
-    if (address) cleanedFormData.append('address', address);
-
-    const specialization = formData.get('specialization') as string;
-    if (specialization) cleanedFormData.append('specialization', specialization);
-
-    // Handle date conversion
-    const joiningDateValue = formData.get('joiningDate');
-    if (joiningDateValue && typeof joiningDateValue === 'string') {
-      try {
-        // Create a proper Date object from the string
-        const date = new Date(joiningDateValue);
-        if (!isNaN(date.getTime())) {
-          // Only add valid dates
-          cleanedFormData.append('joiningDate', date.toISOString());
-        }
-      } catch (e) {
-        // If there's an error, don't add the date field
-        console.error('Error processing date:', e);
-      }
-    }
-
-    // Handle boolean conversion for status
-    const statusValue = formData.get('status');
-    const boolValue = statusValue === 'on' || statusValue === 'true';
-    cleanedFormData.append('status', boolValue.toString());
-
-    // For debugging - log what we're sending to the server
-    console.log('Form data being submitted:');
-    for (const [key, value] of cleanedFormData.entries()) {
-      console.log(`${key}: ${value}`);
-    }
-
-    // Submit the form with our custom handler and cleaned data
-    return formAction(cleanedFormData);
-  };
-
   return (
-    <form action={handleSubmit} className="space-y-6">
+    <form action={formAction} className="space-y-6">
+      {/* Hidden teacherId field for edit mode */}
+      <input type="hidden" name="teacherId" value={defaultValues.teacherId || ''} />
+
       {/* Form-level errors */}
       {formErrors.length > 0 && (
         <div className="p-3 mb-4 text-sm text-white bg-red-500 rounded-md">
@@ -357,9 +299,9 @@ export default function TeacherFormWithAction({
           errorMessage={getFieldErrors('district')?.join(', ')}
           className="w-full"
         >
-          {districts.map((district) => (
-            <SelectItem key={district.id} textValue={district.id}>
-              {district.name}
+          {institutions.map((institution) => (
+            <SelectItem key={institution.id} textValue={institution.id}>
+              {institution.name}
             </SelectItem>
           ))}
         </Select>
@@ -408,23 +350,21 @@ export default function TeacherFormWithAction({
         )}
       </div>
 
-      {/* Submit Button - Hidden in read-only mode */}
-      {!isReadOnly && (
-        <div className="flex justify-end">
-          <Button type="submit" color="primary" isLoading={isPending} isDisabled={isPending}>
-            {teacherId ? 'Update Teacher' : 'Create Teacher'}
-          </Button>
-        </div>
-      )}
+      {/* Submit button */}
+      <div className="flex justify-end">
+        <Button type="submit" color="primary" isLoading={isPending} isDisabled={isPending}>
+          {defaultValues.teacherId ? 'Update Teacher' : 'Create Teacher'}
+        </Button>
+      </div>
 
-      {/* Success indicator */}
+      {/* Success message */}
       {state.success && (
         <div className="p-3 mt-4 text-green-700 bg-green-100 rounded-md">
-          <Chip color="success">Teacher successfully {teacherId ? 'updated' : 'created'}!</Chip>
+          <Chip color="success">
+            Teacher successfully {defaultValues.teacherId ? 'updated' : 'created'}!
+          </Chip>
         </div>
       )}
     </form>
   );
 }
-
-

@@ -1,4 +1,3 @@
-// hooks/useFormData.ts
 import { ActionResult } from '@/backend/actions/IServerAction';
 import { useEffect, useState } from 'react';
 

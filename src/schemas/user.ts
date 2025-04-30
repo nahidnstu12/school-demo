@@ -1,4 +1,4 @@
-import { UserRole } from '@prisma/client';
+import { UserRoleEnum } from '@prisma/client';
 import { z } from 'zod';
 
 // Define the user schema with validation rules
@@ -10,7 +10,7 @@ export const userSchema = z.object({
 
   email: z.string().email({ message: 'Please enter a valid email address' }),
 
-  role: z.nativeEnum(UserRole, {
+  role: z.nativeEnum(UserRoleEnum, {
     required_error: 'Please select a role',
     invalid_type_error: 'Role must be one of the defined options',
   }),

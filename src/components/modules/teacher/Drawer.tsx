@@ -1,7 +1,7 @@
 // components/teachers/TeacherDrawer.tsx
 import { getAllInstitutions } from '@/backend/actions/institution.action';
 import { getTeacherById, getTeacherDesignations } from '@/backend/actions/teacher.action';
-import { TeacherFormValues } from '@/schemas/teacher';
+import { TeacherFormValues, TeacherWithUser } from '@/schemas/teacher';
 import {
   Button,
   Drawer,
@@ -9,7 +9,7 @@ import {
   DrawerContent,
   DrawerFooter,
   DrawerHeader,
-  Spinner
+  Spinner,
 } from '@heroui/react';
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -35,7 +35,6 @@ export default function TeacherDrawer({
   // States
   const [teacher, setTeacher] = useState<Partial<TeacherFormValues>>({});
   const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
-
   const [designations, setDesignations] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,41 +53,6 @@ export default function TeacherDrawer({
     }
   };
 
-  // Handle form submission
-  // const handleSubmit = async (data: TeacherFormValues) => {
-  //   setIsSubmitting(true);
-
-  //   try {
-  //     if (mode === 'create') {
-  //       // Create new teacher with combined data
-  //       console.log("create data>>", data);
-
-  //       const result = await createTeacher(data);
-  //       if (result.success) {
-  //         onSuccess?.();
-  //         onClose();
-  //       } else {
-  //         // Handle error
-  //         console.error('Failed to create teacher:', result.errors);
-  //       }
-  //     } else if (mode === 'edit' && teacherId) {
-  //       // Update existing teacher
-  //       const result = await updateTeacher(teacherId, data);
-  //       if (result.success) {
-  //         onSuccess?.();
-  //         onClose();
-  //       } else {
-  //         // Handle error
-  //         console.error('Failed to update teacher:', result.errors);
-  //       }
-  //     }
-  //   } catch (error) {
-  //     console.error('Error submitting form:', error);
-  //   } finally {
-  //     setIsSubmitting(false);
-  //   }
-  // };
-
   // Load teacher data when drawer opens in read or edit mode
   useEffect(() => {
     const loadTeacher = async () => {
@@ -97,22 +61,25 @@ export default function TeacherDrawer({
       setIsLoading(true);
       try {
         const result = await getTeacherById(teacherId);
-        if (result.success) {
+        if (result.success && result.data) {
+          const teacherData = result.data as TeacherWithUser;
           // Format data for form use
-          const teacherData = result.data;
           setTeacher({
-            firstName: teacherData?.firstName,
-            lastName: teacherData?.lastName,
-            email: teacherData?.email,
-            phone: teacherData?.phone,
-            institutionId: teacherData?.institutionId,
-            designation: teacherData?.designation,
-            pdsId: teacherData?.pdsId || '',
-            joiningDate: teacherData?.joiningDate,
-            address: teacherData?.address || '',
-            district: teacherData?.district || '',
-            specialization: teacherData?.specialization || '',
-            status: teacherData?.status,
+            teacherId: teacherData.id,
+            firstName: teacherData.user.firstName,
+            lastName: teacherData.user.lastName,
+            email: teacherData.user.email,
+            phone: teacherData.user.phone || '',
+            institutionId: teacherData.institutionId,
+            designation: teacherData.designation,
+            pdsId: teacherData.pdsId || '',
+            joiningDate: teacherData.joiningDate
+              ? new Date(teacherData.joiningDate).toISOString()
+              : null,
+            address: teacherData.address || '',
+            district: teacherData.district || '',
+            specialization: teacherData.specialization || '',
+            status: teacherData.status,
           });
         }
       } catch (error) {
@@ -188,7 +155,7 @@ export default function TeacherDrawer({
             </div>
           ) : (
             <TeacherForm
-              defaultValues={teacher}
+              defaultValues={teacher as any}
               // onSubmit={handleSubmit}
               institutions={institutions}
               designations={designations}
