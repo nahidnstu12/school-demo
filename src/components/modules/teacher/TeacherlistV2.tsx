@@ -12,7 +12,7 @@ import { Button, Chip, Input } from '@heroui/react';
 import { Level } from '@prisma/client';
 import { Edit, Eye, Trash } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import TeacherDrawer from './Drawer';
 
 // Define teacher type with necessary fields for display
@@ -38,7 +38,7 @@ interface Teacher {
   };
 }
 
-export default function TeacherList() {
+function TeacherListContent() {
   const { isOpen, mode, itemId, openDrawer, closeDrawer } = useTeacherDrawer();
   const router = useRouter();
   const [institutionId, setInstitutionId] = useState<string>('');
@@ -387,5 +387,13 @@ export default function TeacherList() {
       />
     </div>
   
+  );
+}
+
+export default function TeacherList() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <TeacherListContent />
+    </Suspense>
   );
 }

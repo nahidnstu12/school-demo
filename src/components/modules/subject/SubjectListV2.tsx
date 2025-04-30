@@ -12,7 +12,7 @@ import { CalendarDate, getLocalTimeZone } from "@internationalized/date";
 import { Level } from '@prisma/client';
 import { Edit, Eye, Trash } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import SubjectDrawer from './Drawer';
 
 
@@ -37,7 +37,7 @@ interface AdditionalFilterValue {
   value: any;
 }
 
-export default function SubjectList() {
+function SubjectListContent() {
   const { isOpen, mode, itemId, openDrawer, closeDrawer } = useTeacherDrawer();
   const router = useRouter();
   
@@ -390,5 +390,13 @@ export default function SubjectList() {
         onSuccess={handleSuccess}
       />
     </div>
+  );
+}
+
+export default function SubjectList() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <SubjectListContent />
+    </Suspense>
   );
 }
