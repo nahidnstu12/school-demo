@@ -1,4 +1,4 @@
-import SubjectList from "@/components/modules/subject/SubjectListV2";
+import SubjectList from "@/components/modules/subject/List";
 
 export default function page() {
   return <SubjectList />;

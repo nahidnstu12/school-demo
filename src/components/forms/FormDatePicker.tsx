@@ -114,9 +114,9 @@ export function FormDatePicker({
         )}
       />
       
-      {(errors[name] || getServerErrors(name)) && (
+      {(errors?.[name] || getServerErrors(name)) && (
         <div className="mt-1 text-xs text-red-500">
-          {errors[name]?.message as string || getServerErrors(name)?.join(", ")}
+          {errors?.[name]?.message as string || getServerErrors(name)?.join(", ")}
         </div>
       )}
       

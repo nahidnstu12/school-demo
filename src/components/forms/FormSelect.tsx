@@ -89,9 +89,9 @@ export function FormSelect({
             }}
             isDisabled={isDisabled || isLoading || isDependent}
             isRequired={isRequired}
-            isInvalid={!!errors[name] || !!getServerErrors(name)}
+            isInvalid={!!(errors?.[name]) || !!getServerErrors(name)}
             errorMessage={
-              errors[name]?.message as string || 
+              errors?.[name]?.message as string || 
               getServerErrors(name)?.join(", ")
             }
             className={`w-full ${className}`}
@@ -102,7 +102,7 @@ export function FormSelect({
               </SelectItem>
             ))}
           </Select>
-        )}
+        )} 
       />
       {description && (
         <div className="mt-1 text-xs text-gray-500">{description}</div>

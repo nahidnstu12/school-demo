@@ -1,11 +1,11 @@
 // components/ui/form/FormProvider.tsx
 import React from "react";
-import { FormProvider as RHFFormProvider, UseFormReturn, FieldValues } from "react-hook-form";
+import { FormProvider as RHFFormProvider, UseFormReturn, FieldValues, Path } from "react-hook-form";
 import { Button, Spinner } from "@heroui/react";
 
 interface FormProviderProps<T extends FieldValues> {
   methods: UseFormReturn<T>;
-  onSubmit: (data: T) => void;
+  onSubmit: (formData: FormData) => void | Promise<void>;
   children: React.ReactNode;
   submitText?: string;
   isReadOnly?: boolean;
@@ -33,9 +33,27 @@ export function FormProvider<T extends FieldValues>({
     ...methods,
     formState: {
       ...methods.formState,
-      serverErrors: serverErrors,
+      errors: {
+        ...methods.formState.errors,
+        serverErrors: serverErrors,
+      },
     },
   };
+
+  // Clear server errors when form values change
+  React.useEffect(() => {
+    if (serverErrors.length > 0) {
+      const subscription = methods.watch(() => {
+        // Clear server errors for each field
+        serverErrors.forEach(error => {
+          if (typeof error.field === 'string') {
+            methods.clearErrors(error.field as Path<T>);
+          }
+        });
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, [methods, serverErrors]);
   
   // Extract form-level errors (non-field specific)
   const formErrors = serverErrors.filter(
@@ -47,7 +65,7 @@ export function FormProvider<T extends FieldValues>({
   
   return (
     <RHFFormProvider {...enhancedMethods}>
-      <form onSubmit={methods.handleSubmit(onSubmit)} className={`space-y-6 ${className}`}>
+      <form action={onSubmit} className={`space-y-6 ${className}`}>
         {/* Form-level errors */}
         {formErrors.length > 0 && (
           <div className="p-3 mb-4 text-sm text-white bg-red-500 rounded-md">

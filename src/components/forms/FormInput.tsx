@@ -30,7 +30,7 @@ export function FormInput({
     formState: { errors } 
   } = useFormContext();
   
-  // Get server errors if they exist (assuming they are stored in form context)
+  // Get server errors if they exist
   const getServerErrors = (fieldName: string): string[] | undefined => {
     const serverErrors = (errors as any)?.serverErrors;
     if (serverErrors && Array.isArray(serverErrors)) {
@@ -42,7 +42,19 @@ export function FormInput({
     }
     return undefined;
   };
-  
+
+  // Get both client and server errors
+  const fieldErrors = errors?.[name];
+  const serverFieldErrors = getServerErrors(name);
+  const hasError = !!fieldErrors || !!serverFieldErrors;
+  const errorMessage = fieldErrors?.message as string || serverFieldErrors?.join(", ");
+
+  if(errors?.[name]) {
+    console.log('errors>>', name, errors?.[name]?.message);
+  }
+  if(getServerErrors(name)) {
+    console.log('server errors>>', name, getServerErrors(name));
+  }
   return (
     <div>
       <Controller
@@ -57,11 +69,8 @@ export function FormInput({
             placeholder={placeholder}
             isDisabled={isDisabled}
             isRequired={isRequired}
-            isInvalid={!!errors[name] || !!getServerErrors(name)}
-            errorMessage={
-              errors[name]?.message as string || 
-              getServerErrors(name)?.join(", ")
-            }
+            isInvalid={hasError}
+            errorMessage={errorMessage}
             className={`w-full ${className}`}
             onValueChange={(value) => {
               field.onChange(value);

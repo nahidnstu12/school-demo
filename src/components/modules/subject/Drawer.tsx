@@ -7,7 +7,7 @@ import {
   DrawerFooter,
   Button,
 } from '@heroui/react';
-import { SubjectForm } from './Form';
+import { SubjectForm } from './Form2';
 
 export type DrawerMode = 'create' | 'read' | 'edit';
 

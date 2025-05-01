@@ -65,9 +65,9 @@ export function FormNumberInput({
             step={step}
             isDisabled={isDisabled}
             isRequired={isRequired}
-            isInvalid={!!errors[name] || !!getServerErrors(name)}
+            isInvalid={!!(errors?.[name]) || !!getServerErrors(name)}
             errorMessage={
-              errors[name]?.message as string || 
+              errors?.[name]?.message as string || 
               getServerErrors(name)?.join(", ")
             }
             className={`w-full ${className}`}

@@ -5,8 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useActionState } from "react";
 import { Spinner } from "@heroui/react";
-
-// Import server actions and types
 import { createSubject, getSubjectById, updateSubject } from "@/backend/actions/subject.action";
 import { getAllInstitutions } from "@/backend/actions/institution.action";
 import { getAllLevels } from "@/backend/actions/level.action";
@@ -130,31 +128,10 @@ export function SubjectForm({
 
   // Determine which state and action to use based on mode
   const state = mode === "edit" ? updateState : createState;
+  const formAction = mode === "edit" ? updateAction : createAction;
   const isPending = isUpdatePending || isCreatePending;
 
-  // Submit handler
-  const onSubmit = (data: SubjectData) => {
-    // Create FormData from the form values
-    const formData = new FormData();
-    
-    // Add all form fields to FormData
-    Object.entries(data).forEach(([key, value]) => {
-      if (typeof value === "boolean") {
-        formData.append(key, value ? "true" : "false");
-      } else if (value !== null && value !== undefined) {
-        formData.append(key, String(value));
-      }
-    });
-    
-    // Use startTransition to prevent React warnings
-    startTransition(() => {
-      if (mode === "edit") {
-        updateAction(formData);
-      } else {
-        createAction(formData);
-      }
-    });
-  };
+
 
   // Update form values when subjectData changes
   useEffect(() => {
@@ -203,7 +180,7 @@ export function SubjectForm({
   return (
     <FormProvider
       methods={methods}
-      onSubmit={onSubmit}
+      onSubmit={formAction}
       isReadOnly={isReadOnly}
       isPending={isPending}
       serverErrors={state.errors}
