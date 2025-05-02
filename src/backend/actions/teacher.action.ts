@@ -167,7 +167,7 @@ export async function createTeacher(prevState: ActionResult<Teacher>, formData: 
 //   return { success: true, data: {} as TeacherData };
 // };
 
-export async function updateTeacher(id: string | number, formData: FormData) {
+export async function updateTeacher(prevState: ActionResult<Teacher>,id: string | number, formData: FormData) {
   return TeacherActionInstance.update(id, formData);
 }
 

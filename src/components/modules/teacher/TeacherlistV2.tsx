@@ -41,34 +41,33 @@ interface Teacher {
 function TeacherListContent() {
   const { isOpen, mode, itemId, openDrawer, closeDrawer } = useTeacherDrawer();
   const router = useRouter();
+  
+  // State for filter options
   const [institutionId, setInstitutionId] = useState<string>('');
   const [levels, setLevels] = useState<Level[]>([]);
+  const [designations, setDesignations] = useState<string[]>([]);
+  const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
 
-    // Reference to the DataTable's refetch function
-    const dataTableRef = useRef<{
-      refetchData: () => void;
-    } | null>(null);
+  // Reference to the DataTable's refetch function
+  const dataTableRef = useRef<{
+    refetchData: () => void;
+  } | null>(null);
 
   const {
     getFilterValue,
     setFilter
   } = useDynamicFilters(teacherFilterConfig);
 
+  // Improved handleSuccess callback to actually refresh data
   const handleSuccess = useCallback(() => {
     console.log('Teacher saved successfully, refreshing data...');
     
-    // Option 2: If you implemented a ref-based approach with the DataTable
     if (dataTableRef.current) {
       dataTableRef.current.refetchData();
     }
     
-    // Close the drawer after success
     closeDrawer();
   }, [closeDrawer]);
-
-  // State for filter options
-  const [designations, setDesignations] = useState<string[]>([]);
-  const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
 
   // Fetch designations and institutions on mount
   useEffect(() => {
@@ -93,10 +92,10 @@ function TeacherListContent() {
     fetchMetadata();
   }, []);
 
+  // Fetch levels when institutionId changes
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        // Fetch levels
         const filters = institutionId ? { where: { institutionId } } : null;
         const levelsResult = await getAllLevels(filters);
         if (levelsResult.success) {
@@ -113,29 +112,13 @@ function TeacherListContent() {
   // Handle Add New button click
   const handleAddNew = useCallback(() => {
     openDrawer('create');
-  }, [router]);
-
-  // Handle view, edit, delete actions
-  const handleView = useCallback(
-    (id: string) => {
-      openDrawer('read', id);
-    },
-    [openDrawer]
-  );
-
-  const handleEdit = useCallback(
-    (id: string) => {
-      openDrawer('edit', id);
-    },
-    [openDrawer]
-  );
+  }, [openDrawer]);
 
   const handleDelete = useCallback((id: string) => {
-    // Implement delete logic or confirmation dialog
     console.log('Delete teacher', id);
   }, []);
 
-  // Define columns for the table with all cell rendering logic
+  // Define columns for the table
   const columns: DataTableColumn<Teacher>[] = [
     {
       key: 'fullName',
@@ -214,79 +197,39 @@ function TeacherListContent() {
         </Chip>
       ),
     },
-    // {
-    //   key: 'actions',
-    //   header: 'Actions',
-    //   cell: (teacher: Teacher) => (
-    //     <div className="relative flex items-center gap-2">
-    //       <Dropdown>
-    //         <DropdownTrigger>
-    //           <Button isIconOnly size="sm" variant="light">
-    //             <EllipsisVertical className="text-default-300" />
-    //           </Button>
-    //         </DropdownTrigger>
-    //         <DropdownMenu aria-label="Actions">
-    //           <DropdownItem
-    //             key="view"
-    //             startContent={<Eye className="w-4 h-4" />}
-    //             onPress={() => handleView(teacher.id)}
-    //           >
-    //             View
-    //           </DropdownItem>
-    //           <DropdownItem
-    //             key="edit"
-    //             startContent={<Edit className="w-4 h-4" />}
-    //             onPress={() => handleEdit(teacher.id)}
-    //           >
-    //             Edit
-    //           </DropdownItem>
-    //           <DropdownItem
-    //             key="delete"
-    //             startContent={<Trash className="w-4 h-4" />}
-    //             className="text-danger"
-    //             color="danger"
-    //             onPress={() => handleDelete(teacher.id)}
-    //           >
-    //             Delete
-    //           </DropdownItem>
-    //         </DropdownMenu>
-    //       </Dropdown>
-    //     </div>
-    //   ),
-    // },
     {
-      key: "actions",
-      header: "Actions",
+      key: 'actions',
+      header: 'Actions',
       cell: (teacher) => (
         <div className="relative flex items-center gap-2">
-          <Button 
-            isIconOnly 
-            size="sm" 
+          <Button
+            isIconOnly
+            size="sm"
             variant="light"
             onPress={() => openDrawer('read', teacher.id)}
           >
             <Eye className="w-4 h-4" />
           </Button>
-          <Button 
-            isIconOnly 
-            size="sm" 
+          <Button
+            isIconOnly
+            size="sm"
             variant="light"
             onPress={() => openDrawer('edit', teacher.id)}
           >
             <Edit className="w-4 h-4" />
           </Button>
-          <Button 
-            isIconOnly 
-            size="sm" 
-            variant="light" 
+          <Button
+            isIconOnly
+            size="sm"
+            variant="light"
             className="text-danger"
             onPress={() => handleDelete(teacher.id)}
           >
             <Trash className="w-4 h-4" />
           </Button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   const handleInstitutionChange = (value: string) => {
@@ -294,91 +237,69 @@ function TeacherListContent() {
     setFilter('institutionId', 'equals', value);
   };
 
+  // Handle changes in the additional filter inputs
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-
-    if (name === 'institutionId') setInstitutionId(value);
-
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFilter(name, 'equals', checked);
-    } else {
-      // For other inputs
-      console.log('handleChange>>', name, value);
-
-      setFilter(
-        name,
-        // name === 'institutionId' || name === 'designation' ? 'equals' : 'contains',
-        teacherFilterConfig.fields[name].defaultOperator || 'contains',
-        value
-      );
-    }
+    const { name, value } = e.target;
+    setFilter(
+      name,
+      teacherFilterConfig.fields[name]?.defaultOperator || 'contains',
+      value
+    );
   };
 
+  // Additional filters that will be shown outside the filter modal
+  const additionalFilters = [
+    <Input
+      key="email-filter"
+      type="email"
+      aria-label="Email Address"
+      name="email"
+      placeholder="Filter by email..."
+      value={getFilterValue('email') || ''}
+      onChange={handleInputChange}
+      variant="bordered"
+    />,
+    <Input
+      key="phone-filter"
+      type="text"
+      aria-label="Phone Number"
+      name="phone"
+      placeholder="Filter by phone..."
+      value={getFilterValue('phone') || ''}
+      onChange={handleInputChange}
+      variant="bordered"
+    />
+  ];
+
   return (
-    // <div className="container mx-auto p-4">
-    //   <DataTable<Teacher>
-    //     title="Teachers"
-    //     columns={columns}
-    //     filterConfig={teacherFilterConfig}
-    //     fetchData={getTeachersWithFilter}
-    //     initialVisibleColumns={[
-    //       'fullName',
-    //       'institutionId',
-    //       'designation',
-    //       'joiningDate',
-    //       'status',
-    //       'actions',
-    //     ]}
-    //     onAddNew={handleAddNew}
-    //     selectionMode="multiple"
-    //     onSelectionChange={(keys) => console.log('Selected:', keys)}
-    //     emptyContent="No teachers found"
-    //   />
-    // </div>
     <div className="container mx-auto p-4">
       <DataTable
         title="Teachers"
         columns={columns}
         filterConfig={teacherFilterConfig}
         fetchData={getTeachersWithFilter}
-        initialVisibleColumns={["fullName", "institutionId", "designation", "status", "actions"]}
+        initialVisibleColumns={[
+          'fullName',
+          'institutionId',
+          'designation',
+          'status',
+          'actions',
+        ]}
         onAddNew={handleAddNew}
         selectionMode="multiple"
-        onSelectionChange={(keys) => console.log("Selected:", keys)}
+        onSelectionChange={(keys) => console.log('Selected:', keys)}
         emptyContent="No teachers found"
         ref={dataTableRef}
         relationshipFilters={[
           {
-            parentField: "institutionId",
-            childField: "levelId",
-            onParentChange: handleInstitutionChange
-          }
+            parentField: 'institutionId',
+            childField: 'levelId',
+            onParentChange: handleInstitutionChange,
+          },
         ]}
-        additionalFilters={[
-          <Input
-            key="email-filter"
-            type="email"
-            aria-label="Email Address"
-            name="email"
-            placeholder="Filter by email..."
-            value={getFilterValue('email') || ''}
-            onChange={handleInputChange}
-            variant="bordered"
-          />,
-          <Input
-            key="phone-filter"
-            type="text"
-            aria-label="Phone Number"
-            name="phone"
-            placeholder="Filter by phone..."
-            value={getFilterValue('phone') || ''}
-            onChange={handleInputChange}
-            variant="bordered"
-          />
-        ]}
+        additionalFilters={additionalFilters}
       />
-       <TeacherDrawer
+      <TeacherDrawer
         isOpen={isOpen}
         onClose={closeDrawer}
         mode={mode}
@@ -386,7 +307,6 @@ function TeacherListContent() {
         onSuccess={handleSuccess}
       />
     </div>
-  
   );
 }
 

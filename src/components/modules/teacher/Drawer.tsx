@@ -1,19 +1,21 @@
-// components/teachers/TeacherDrawer.tsx
+'use client';
+
+import React from 'react';
 import { getAllInstitutions } from '@/backend/actions/institution.action';
 import { getTeacherById, getTeacherDesignations } from '@/backend/actions/teacher.action';
 import { TeacherFormValues, TeacherWithUser } from '@/schemas/teacher';
 import {
-  Button,
   Drawer,
-  DrawerBody,
   DrawerContent,
-  DrawerFooter,
   DrawerHeader,
+  DrawerBody,
+  DrawerFooter,
+  Button,
   Spinner,
 } from '@heroui/react';
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import TeacherForm from './Form';
+import { TeacherForm } from './Form2';
 
 export type DrawerMode = 'create' | 'read' | 'edit';
 
@@ -131,6 +133,21 @@ export default function TeacherDrawer({
     }
   }, [isOpen]);
 
+  // Handle form success and close drawer
+  const handleFormSuccess = () => {
+    console.log('Form submission successful');
+    
+    // Call the onSuccess callback from parent to trigger data refresh
+    if (onSuccess) {
+      onSuccess();
+    }
+    
+    // Close the drawer after a short delay to show success message
+    setTimeout(() => {
+      onClose();
+    }, 1000);
+  };
+
   return (
     <Drawer isOpen={isOpen} onClose={onClose} placement="right" size="lg">
       <DrawerContent>
@@ -155,12 +172,13 @@ export default function TeacherDrawer({
             </div>
           ) : (
             <TeacherForm
-              defaultValues={teacher as any}
-              // onSubmit={handleSubmit}
-              institutions={institutions}
-              designations={designations}
+              teacherId={teacherId}
+              mode={mode}
               isReadOnly={mode === 'read'}
-              // isSubmitting={isSubmitting}
+              onSuccess={handleFormSuccess}
+              // defaultValues={teacher as any}
+              // institutions={institutions}
+              // designations={designations}
             />
           )}
         </DrawerBody>

@@ -1,4 +1,4 @@
-import ProductList from '../../../components/examples/productFilter';
+import ProductList from "@/components/modules/product/List";
 
 export default function page() {
   return <ProductList />;

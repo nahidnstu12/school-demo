@@ -14,6 +14,7 @@ import { Edit, Eye, Trash } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useFilterStore } from '@/stores/useFilterStore';
+import { FilterConfig } from '@/utils/filter-helpers';
 
 // Define subject type with necessary fields for display
 interface ISubject {
@@ -31,12 +32,12 @@ interface ISubject {
 export default function SubjectList() {
   const { isOpen, mode, itemId, openDrawer, closeDrawer } = useTeacherDrawer();
   const router = useRouter();
-  
+
   // State for filter options
   const [institutionId, setInstitutionId] = useState<string>('');
   const [levels, setLevels] = useState<Level[]>([]);
   const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
-  
+
   // Reference to the DataTable's refetch function
   const dataTableRef = useRef<{
     refetchData: () => void;
@@ -47,18 +48,18 @@ export default function SubjectList() {
 
   // Set filter config once
   useEffect(() => {
-    setConfig(subjectFilterConfig);
+    setConfig(subjectFilterConfig as FilterConfig);
   }, [setConfig]);
 
   // Improved handleSuccess callback to actually refresh data
   const handleSuccess = useCallback(() => {
     console.log('Subject saved successfully, refreshing data...');
-    
+
     // Option 2: If you implemented a ref-based approach with the DataTable
     if (dataTableRef.current) {
       dataTableRef.current.refetchData();
     }
-    
+
     // Close the drawer after success
     closeDrawer();
   }, [closeDrawer]);
@@ -69,6 +70,7 @@ export default function SubjectList() {
       try {
         // Fetch institutions
         const institutionsResult = await getAllInstitutions();
+        console.log('institutionsResult>>', institutionsResult);
         if (institutionsResult.success) {
           setInstitutions(institutionsResult.data);
         }
@@ -80,8 +82,8 @@ export default function SubjectList() {
     fetchMetadata();
   }, []);
 
- // Sync institutionId with filter store value
- useEffect(() => {
+  // Sync institutionId with filter store value
+  useEffect(() => {
     const storeInstitutionId = getFilterValue('institutionId');
     if (storeInstitutionId && storeInstitutionId !== institutionId) {
       setInstitutionId(storeInstitutionId);
@@ -117,18 +119,18 @@ export default function SubjectList() {
 
   // Define columns for the table with all cell rendering logic
   const columns: DataTableColumn<ISubject>[] = [
-    {
-      key: 'name',
-      header: 'Name',
-      sortable: true,
-      filterable: true, // We can use the filter modal now
-      filterType: 'text',
-      cell: (subject: ISubject) => (
-        <div className="flex flex-col">
-          <p className="text-bold text-small">{subject.name}</p>
-        </div>
-      ),
-    },
+    // {
+    //   key: 'name',
+    //   header: 'Name',
+    //   sortable: true,
+    //   filterable: true, // We can use the filter modal now
+    //   filterType: 'text',
+    //   cell: (subject: ISubject) => (
+    //     <div className="flex flex-col">
+    //       <p className="text-bold text-small">{subject.name}</p>
+    //     </div>
+    //   ),
+    // },
     {
       key: 'institutionId',
       header: 'Institution',
@@ -138,14 +140,6 @@ export default function SubjectList() {
       filterType: 'select',
       filterOptions: institutions.map((inst) => ({ label: inst.name, value: inst.id })),
     },
-
-    {
-      key: 'code',
-      header: 'Code',
-      filterable: true,
-      filterType: 'text',
-      cell: (subject: ISubject) => subject.code || 'N/A',
-    },
     {
       key: 'levelId',
       header: 'Level',
@@ -154,6 +148,13 @@ export default function SubjectList() {
       filterType: 'select',
       filterOptions: levels.map((l) => ({ label: l.name, value: l.id })),
       cell: (subject: ISubject) => subject.levelName,
+    },
+    {
+      key: 'code',
+      header: 'Code',
+      filterable: true,
+      filterType: 'text',
+      cell: (subject: ISubject) => subject.code || 'N/A',
     },
 
     {
@@ -216,7 +217,7 @@ export default function SubjectList() {
   const handleInstitutionChange = (value: string) => {
     // Set local state
     setInstitutionId(value);
-    
+
     // Update filter store - this will be reflected in the filter modal too
     setFilter('institutionId', 'equals', value);
   };
@@ -224,16 +225,12 @@ export default function SubjectList() {
   // Handle changes in the additional filter inputs
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     // Update filter store - this will be reflected in the filter modal too
-    const column = columns.find(col => col.key === name);
+    const column = columns.find((col) => col.key === name);
     const operator = column?.filterType === 'select' ? 'equals' : 'contains';
-    
-    setFilter(
-      name,
-      subjectFilterConfig.fields[name]?.defaultOperator || operator,
-      value
-    );
+
+    setFilter(name, subjectFilterConfig.fields[name]?.defaultOperator || operator, value);
   };
 
   // Additional filters that will be shown outside the filter modal
@@ -249,7 +246,7 @@ export default function SubjectList() {
       value={getFilterValue('name') || ''}
       onChange={handleInputChange}
       variant="bordered"
-    />
+    />,
   ];
 
   return (
@@ -275,10 +272,10 @@ export default function SubjectList() {
         ref={dataTableRef}
         relationshipFilters={[
           {
-            parentField: "institutionId",
-            childField: "levelId",
-            onParentChange: handleInstitutionChange
-          }
+            parentField: 'institutionId',
+            childField: 'levelId',
+            onParentChange: handleInstitutionChange,
+          },
         ]}
         additionalFilters={additionalFilters}
       />

@@ -1,9 +1,8 @@
-// src/stores/useFilterStore.ts
+import { FilterOperator, SimpleFilter } from '@/utils/filter-helpers';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { AdvancedFilters, FilterConfig, FilterOperator, SimpleFilter } from '@/utils/filter-helpers';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { FilterStore, SortConfig } from './types/filter.types';
+import { buildSimpleFilterCondition, buildUrlParams, parseFilterValue, updateUrlWithoutReload } from './utils/filter.utils';
 
 // Add Next.js window type
 declare global {
@@ -14,42 +13,8 @@ declare global {
   }
 }
 
-// Define filter state structure
-interface FilterState {
-  // Filter state
-  filters: SimpleFilter[];
-  advancedFilters?: AdvancedFilters;
-  page: number;
-  pageSize: number;
-  sort: { field: string; direction: 'asc' | 'desc' }[];
-  config: FilterConfig | null;
-  
-  // UI state
-  isSubmitting: boolean;
-  lastFetchUrl: string;
-  appliedFiltersCount: number;
-  
-  // Actions
-  setFilter: (field: string, operator: FilterOperator, value: any) => void;
-  setRangeFilter: (field: string, min: any, max: any) => void;
-  applyFilters: () => void;
-  setPage: (page: number) => void; 
-  setPageSize: (size: number) => void;
-  setSort: (field: string, direction: 'asc' | 'desc') => void;
-  clearAllFilters: () => void;
-  setConfig: (config: FilterConfig) => void;
-  
-  // URL functionality
-  parseFromUrl: (searchParams: URLSearchParams) => void;
-  
-  // Derived state
-  getPrismaFilter: () => any;
-  getFilterValue: (field: string) => any;
-  calculateAppliedFiltersCount: () => void;
-}
-
 // Create Zustand store with persist middleware
-export const useFilterStore = create<FilterState>()(
+export const useFilterStore = create<FilterStore>()(
   persist(
     (set, get) => ({
       // Initial state
@@ -66,10 +31,8 @@ export const useFilterStore = create<FilterState>()(
       // Set a single filter
       setFilter: (field, operator, value) => {
         set(state => {
-          // Remove any existing filter for this field
           const existingFilters = state.filters.filter(f => f.field !== field);
           
-          // Only add if value is not empty
           if (value !== undefined && value !== null && value !== '') {
             return {
               ...state,
@@ -84,13 +47,12 @@ export const useFilterStore = create<FilterState>()(
         });
       },
       
-      // Set range filter (date ranges, numeric ranges)
+      // Set range filter
       setRangeFilter: (field, min, max) => {
         if (
           (min === undefined || min === null || min === '') &&
           (max === undefined || max === null || max === '')
         ) {
-          // If both values are empty, remove the filter
           set(state => ({
             ...state,
             filters: state.filters.filter(f => f.field !== field)
@@ -98,93 +60,29 @@ export const useFilterStore = create<FilterState>()(
           return;
         }
 
-        if (
-          min !== undefined && min !== null && min !== '' &&
-          max !== undefined && max !== null && max !== ''
-        ) {
-          // Both values - use between
+        if (min && max) {
           get().setFilter(field, 'between', [min, max]);
-        } else if (min !== undefined && min !== null && min !== '') {
-          // Just min - use gte
+        } else if (min) {
           get().setFilter(field, 'gte', min);
-        } else if (max !== undefined && max !== null && max !== '') {
-          // Just max - use lte
+        } else if (max) {
           get().setFilter(field, 'lte', max);
         }
       },
       
       // Apply filters to URL and trigger data fetch
       applyFilters: () => {
-        // Set submitting flag to prevent double fetches
         set({ isSubmitting: true, page: 1 });
         
-        // Update URL with current filter state
-        const router = globalThis.window ? globalThis.window.next?.router : undefined;
-        if (router) {
-          const params = new URLSearchParams();
-          
-          // Add pagination
-          if (get().page > 1) {
-            params.set('page', get().page.toString());
-          }
-          
-          params.set('pageSize', get().pageSize.toString());
-          
-          // Add sorting
-          if (get().sort.length > 0) {
-            const [firstSort] = get().sort;
-            params.set('sort', firstSort.field);
-            params.set('dir', firstSort.direction);
-          }
-          
-          // Add filters
-          get().filters.forEach(filter => {
-            const fieldConfig = get().config?.fields[filter.field];
-            if (!fieldConfig) return;
-            
-            const urlParam = fieldConfig.urlParam || filter.field;
-            
-            // Handle range filters (between, gte, lte)
-            if (filter.operator === 'between' && Array.isArray(filter.value)) {
-              const [min, max] = filter.value;
-              if (min) params.set(`${urlParam}Min`, String(min));
-              if (max) params.set(`${urlParam}Max`, String(max));
-            } else if (filter.operator === 'gte') {
-              params.set(`${urlParam}Min`, String(filter.value));
-            } else if (filter.operator === 'lte') {
-              params.set(`${urlParam}Max`, String(filter.value));
-            } else {
-              // For other operators
-              const isDefaultOp = filter.operator === (fieldConfig.defaultOperator || 'equals');
-              const paramName = isDefaultOp
-                ? urlParam
-                : `${urlParam}:${filter.operator}`;
-                
-              params.set(paramName, String(filter.value));
-            }
-          });
-          
-          // Add advanced filters if any
-          const advancedFilters = get().advancedFilters;
-          if (advancedFilters && typeof advancedFilters === 'object' && Object.keys(advancedFilters).length > 0) {
-            params.set('advanced', JSON.stringify(advancedFilters));
-          }
-          
-          // Update URL
-          const queryString = params.toString();
-          const newUrl = `${window.location.pathname}?${queryString}`;
-          
-          // Update URL without reloading the page
-          window.history.pushState({ path: newUrl }, '', newUrl);
-          set({ lastFetchUrl: queryString });
-        }
+        const state = get();
+        const params = buildUrlParams(state);
+        const queryString = updateUrlWithoutReload(params);
         
-        // Reset submitting flag after a delay
+        set({ lastFetchUrl: queryString });
+        
         setTimeout(() => {
           set({ isSubmitting: false });
         }, 500);
         
-        // Update filter count
         get().calculateAppliedFiltersCount();
       },
       
@@ -192,20 +90,12 @@ export const useFilterStore = create<FilterState>()(
       setPage: (page) => {
         set({ isSubmitting: true, page });
         
-        // Update URL
-        const router = globalThis.window ? globalThis.window.next?.router : undefined;
-        if (router) {
-          const params = new URLSearchParams(window.location.search);
-          params.set('page', page.toString());
-          
-          const queryString = params.toString();
-          const newUrl = `${window.location.pathname}?${queryString}`;
-          
-          window.history.pushState({ path: newUrl }, '', newUrl);
-          set({ lastFetchUrl: queryString });
-        }
+        const params = new URLSearchParams(window.location.search);
+        params.set('page', page.toString());
+        const queryString = updateUrlWithoutReload(params);
         
-        // Reset submitting flag after a delay
+        set({ lastFetchUrl: queryString });
+        
         setTimeout(() => {
           set({ isSubmitting: false });
         }, 500);
@@ -215,21 +105,13 @@ export const useFilterStore = create<FilterState>()(
       setPageSize: (pageSize) => {
         set({ isSubmitting: true, pageSize, page: 1 });
         
-        // Update URL
-        const router = globalThis.window ? globalThis.window.next?.router : undefined;
-        if (router) {
-          const params = new URLSearchParams(window.location.search);
-          params.set('pageSize', pageSize.toString());
-          params.set('page', '1');
-          
-          const queryString = params.toString();
-          const newUrl = `${window.location.pathname}?${queryString}`;
-          
-          window.history.pushState({ path: newUrl }, '', newUrl);
-          set({ lastFetchUrl: queryString });
-        }
+        const params = new URLSearchParams(window.location.search);
+        params.set('pageSize', pageSize.toString());
+        params.set('page', '1');
+        const queryString = updateUrlWithoutReload(params);
         
-        // Reset submitting flag after a delay
+        set({ lastFetchUrl: queryString });
+        
         setTimeout(() => {
           set({ isSubmitting: false });
         }, 500);
@@ -242,21 +124,13 @@ export const useFilterStore = create<FilterState>()(
           sort: [{ field, direction }] 
         });
         
-        // Update URL
-        const router = globalThis.window ? globalThis.window.next?.router : undefined;
-        if (router) {
-          const params = new URLSearchParams(window.location.search);
-          params.set('sort', field);
-          params.set('dir', direction);
-          
-          const queryString = params.toString();
-          const newUrl = `${window.location.pathname}?${queryString}`;
-          
-          window.history.pushState({ path: newUrl }, '', newUrl);
-          set({ lastFetchUrl: queryString });
-        }
+        const params = new URLSearchParams(window.location.search);
+        params.set('sort', field);
+        params.set('dir', direction);
+        const queryString = updateUrlWithoutReload(params);
         
-        // Reset submitting flag after a delay
+        set({ lastFetchUrl: queryString });
+        
         setTimeout(() => {
           set({ isSubmitting: false });
         }, 500);
@@ -275,24 +149,16 @@ export const useFilterStore = create<FilterState>()(
           sort: config?.defaultSort ? [config.defaultSort] : [],
         });
         
-        // Update URL
-        const router = globalThis.window ? globalThis.window.next?.router : undefined;
-        if (router) {
-          const params = new URLSearchParams();
-          if (config?.defaultSort) {
-            params.set('sort', config.defaultSort.field);
-            params.set('dir', config.defaultSort.direction);
-          }
-          params.set('pageSize', String(config?.defaultPageSize || 10));
-          
-          const queryString = params.toString();
-          const newUrl = `${window.location.pathname}?${queryString}`;
-          
-          window.history.pushState({ path: newUrl }, '', newUrl);
-          set({ lastFetchUrl: queryString });
+        const params = new URLSearchParams();
+        if (config?.defaultSort) {
+          params.set('sort', config.defaultSort.field);
+          params.set('dir', config.defaultSort.direction);
         }
+        params.set('pageSize', String(config?.defaultPageSize || 10));
         
-        // Reset submitting flag and filter count
+        const queryString = updateUrlWithoutReload(params);
+        set({ lastFetchUrl: queryString });
+        
         setTimeout(() => {
           set({ isSubmitting: false, appliedFiltersCount: 0 });
         }, 500);
@@ -302,15 +168,13 @@ export const useFilterStore = create<FilterState>()(
       setConfig: (config) => {
         set({ config });
         
-        // Initialize with default sort if provided
         if (config.defaultSort) {
           set(state => ({
             ...state,
-            sort: state.sort.length > 0 ? state.sort : [config.defaultSort]
+            sort: state.sort.length > 0 ? state.sort : [config.defaultSort as SortConfig]
           }));
         }
         
-        // Initialize with default page size
         if (config.defaultPageSize) {
           set(state => ({
             ...state,
@@ -324,7 +188,7 @@ export const useFilterStore = create<FilterState>()(
         const config = get().config;
         if (!config) return;
         
-        const newState: Partial<FilterState> = {
+        const newState: Partial<FilterStore> = {
           filters: [],
           page: Number(searchParams.get('page') || 1),
           pageSize: Number(searchParams.get('pageSize') || config.defaultPageSize || 10),
@@ -343,19 +207,14 @@ export const useFilterStore = create<FilterState>()(
         // Parse simple filters
         const simpleFilters: SimpleFilter[] = [];
         
-        // Iterate through all the configured fields
         Object.entries(config.fields).forEach(([fieldName, fieldConfig]) => {
-          // Get the URL parameter name for this field
           const urlParam = fieldConfig.urlParam || fieldName;
           
-          // Check for field:operator format params
           for (const [param, value] of searchParams.entries()) {
-            // Skip non-field params
             if (['page', 'pageSize', 'sort', 'dir', 'advanced'].includes(param)) {
               continue;
             }
             
-            // Parse field and operator from param name
             let field = param;
             let operator: FilterOperator = fieldConfig.defaultOperator || 'equals';
             
@@ -365,30 +224,18 @@ export const useFilterStore = create<FilterState>()(
               operator = parts[1] as FilterOperator;
             }
             
-            // If this param is for our current field
             if (field === urlParam && value) {
-              // Parse the value according to field type
-              let parsedValue: any = value;
+              const parsedValue = parseFilterValue(value, fieldConfig.type);
               
-              // Type conversion based on field type
-              if (fieldConfig.type === 'number') {
-                parsedValue = Number(value);
-              } else if (fieldConfig.type === 'boolean') {
-                parsedValue = value === 'true';
-              } else if (fieldConfig.type === 'date') {
-                parsedValue = new Date(value);
-              }
-              
-              // Add to simple filters
               simpleFilters.push({
-                field: fieldName, // Use the actual field name, not URL param
+                field: fieldName,
                 operator,
                 value: parsedValue,
               });
             }
           }
           
-          // Check for special between operator (range fields)
+          // Check for range filters
           const minParam = `${urlParam}Min`;
           const maxParam = `${urlParam}Max`;
           
@@ -397,53 +244,25 @@ export const useFilterStore = create<FilterState>()(
             const maxValue = searchParams.get(maxParam);
             
             if (minValue && maxValue) {
-              // Both min and max - use between
-              let parsedMin: any = minValue;
-              let parsedMax: any = maxValue;
-              
-              // Type conversion
-              if (fieldConfig.type === 'number') {
-                parsedMin = Number(minValue);
-                parsedMax = Number(maxValue);
-              } else if (fieldConfig.type === 'date') {
-                parsedMin = new Date(minValue);
-                parsedMax = new Date(maxValue);
-              }
-              
               simpleFilters.push({
                 field: fieldName,
                 operator: 'between',
-                value: [parsedMin, parsedMax],
+                value: [
+                  parseFilterValue(minValue, fieldConfig.type),
+                  parseFilterValue(maxValue, fieldConfig.type)
+                ],
               });
             } else if (minValue) {
-              // Just min - use gte
-              let parsedMin: any = minValue;
-              
-              if (fieldConfig.type === 'number') {
-                parsedMin = Number(minValue);
-              } else if (fieldConfig.type === 'date') {
-                parsedMin = new Date(minValue);
-              }
-              
               simpleFilters.push({
                 field: fieldName,
                 operator: 'gte',
-                value: parsedMin,
+                value: parseFilterValue(minValue, fieldConfig.type),
               });
             } else if (maxValue) {
-              // Just max - use lte
-              let parsedMax: any = maxValue;
-              
-              if (fieldConfig.type === 'number') {
-                parsedMax = Number(maxValue);
-              } else if (fieldConfig.type === 'date') {
-                parsedMax = new Date(maxValue);
-              }
-              
               simpleFilters.push({
                 field: fieldName,
                 operator: 'lte',
-                value: parsedMax,
+                value: parseFilterValue(maxValue, fieldConfig.type),
               });
             }
           }
@@ -461,10 +280,7 @@ export const useFilterStore = create<FilterState>()(
           }
         }
         
-        // Update state with values from URL
-        set(newState as FilterState);
-        
-        // Update filter count
+        set(newState as FilterStore);
         get().calculateAppliedFiltersCount();
       },
       
@@ -473,7 +289,6 @@ export const useFilterStore = create<FilterState>()(
         const state = get();
         const result: any = {};
         
-        // Build where clause
         const whereConditions: any[] = [];
         
         // Process simple filters
@@ -511,14 +326,12 @@ export const useFilterStore = create<FilterState>()(
           }
         }
         
-        // Add where clause if we have conditions
         if (whereConditions.length > 0) {
           result.where = whereConditions.length === 1 
             ? whereConditions[0] 
             : { AND: whereConditions };
         }
         
-        // Add sorting
         if (state.sort && state.sort.length > 0) {
           if (state.sort.length === 1) {
             const { field, direction } = state.sort[0];
@@ -530,7 +343,6 @@ export const useFilterStore = create<FilterState>()(
           }
         }
         
-        // Add pagination
         result.skip = (state.page - 1) * state.pageSize;
         result.take = state.pageSize;
         
@@ -558,7 +370,6 @@ export const useFilterStore = create<FilterState>()(
         const state = get();
         let count = 0;
         
-        // Count active filters
         Object.keys(state.config?.fields || {}).forEach(key => {
           const value = state.getFilterValue(key);
           if (value) {
@@ -570,7 +381,6 @@ export const useFilterStore = create<FilterState>()(
           }
         });
         
-        // Count search as a filter if present
         if (state.getFilterValue('search')) {
           count++;
         }
@@ -581,74 +391,11 @@ export const useFilterStore = create<FilterState>()(
     {
       name: 'filter-storage',
       partialize: (state) => ({ 
-        // Only persist these values
         pageSize: state.pageSize,
-        // Don't persist filters or other state
       }),
     }
   )
 );
 
-// Helper function to build a Prisma condition from a simple filter
-function buildSimpleFilterCondition(filter: SimpleFilter) {
-  const { field, operator, value } = filter;
-  
-  // Skip empty values
-  if (value === undefined || value === null || value === '') {
-    return null;
-  }
-  
-  switch (operator) {
-    case 'equals':
-      return { [field]: { equals: value } };
-    case 'contains':
-      return { [field]: { contains: value } };
-    case 'startsWith':
-      return { [field]: { startsWith: value } };
-    case 'endsWith':
-      return { [field]: { endsWith: value } };
-    case 'gt':
-      return { [field]: { gt: value } };
-    case 'gte':
-      return { [field]: { gte: value } };
-    case 'lt':
-      return { [field]: { lt: value } };
-    case 'lte':
-      return { [field]: { lte: value } };
-    case 'in':
-      return { [field]: { in: Array.isArray(value) ? value : [value] } };
-    case 'between':
-      if (Array.isArray(value) && value.length === 2) {
-        return {
-          AND: [
-            { [field]: { gte: value[0] } },
-            { [field]: { lte: value[1] } }
-          ],
-        };
-      }
-      return null;
-    default:
-      return { [field]: value };
-  }
-}
 
-// Hook to sync URL with filter store
-export function useSyncUrlWithFilterStore(config: FilterConfig) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  
-  const setConfig = useFilterStore(state => state.setConfig);
-  const parseFromUrl = useFilterStore(state => state.parseFromUrl);
-  
-  // Set config once
-  useEffect(() => {
-    setConfig(config);
-  }, [config, setConfig]);
-  
-  // Sync from URL when it changes
-  useEffect(() => {
-    parseFromUrl(searchParams as unknown as URLSearchParams);
-  }, [searchParams, parseFromUrl]);
-  
-  return null;
-}
+

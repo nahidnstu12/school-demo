@@ -1,40 +1,57 @@
+import { useFilterStore } from "@/stores/useFilterStore";
 import { FilterConfig } from "@/utils/filter-helpers";
 import {
   Button,
+  DatePicker,
   Input,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
   Select,
   SelectItem,
-  DatePicker,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   useDisclosure
 } from "@heroui/react";
 import { CalendarDate, getLocalTimeZone } from "@internationalized/date";
 import { Filter, Search } from 'lucide-react';
-import { FormEvent, useState, useEffect, useRef } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { DataTableColumn } from "./types";
-import { useFilterStore } from "@/stores/useFilterStore";
 
 interface FilterModalProps {
   columns: DataTableColumn<any>[];
   filterConfig: FilterConfig;
+  getFilterValue: (field: string) => any;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  handleSubmit: (e: React.FormEvent) => void;
+  clearFilters: () => void;
+  sortValue: string;
+  handleSortChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  searchValue: string;
+  appliedFiltersCount: number;
   additionalFilterFields?: React.ReactNode[];
 }
+
+type LocalFilters = Record<string, any>;
 
 export default function FilterModal({
   columns,
   filterConfig,
+  getFilterValue,
+  handleInputChange,
+  handleSubmit,
+  clearFilters,
+  sortValue,
+  handleSortChange,
+  searchValue,
+  appliedFiltersCount,
   additionalFilterFields
 }: FilterModalProps) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   
   // Get filter state and actions from Zustand store
   const {
-    appliedFiltersCount,
-    getFilterValue,
+    appliedFiltersCount: zustandAppliedFiltersCount,
     setFilter,
     setRangeFilter,
     applyFilters,
@@ -42,7 +59,7 @@ export default function FilterModal({
   } = useFilterStore();
   
   // Local state to store current filter values
-  const [localFilters, setLocalFilters] = useState<Record<string, any>>({});
+  const [localFilters, setLocalFilters] = useState<LocalFilters>({});
   const [localSearchValue, setLocalSearchValue] = useState('');
   const initialRenderRef = useRef(true);
   const isSubmittingRef = useRef(false);
@@ -53,7 +70,7 @@ export default function FilterModal({
       console.log("Modal opened, updating local filters");
       
       // Create an object to store all current filter values
-      const currentFilters: Record<string, any> = { 
+      const currentFilters: LocalFilters = { 
         search: getFilterValue('search') || '' 
       };
       
@@ -84,11 +101,11 @@ export default function FilterModal({
   // Get only filterable columns
   const filterableColumns = columns.filter(col => col.filterable);
 
-  // Handle local input changes
+  // Handle local input changes without updating the Zustand store
   const handleLocalInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    // Update local state
+    // Update local state only
     if (name === 'search') {
       setLocalSearchValue(value);
     } else {
@@ -97,21 +114,12 @@ export default function FilterModal({
         [name]: value
       }));
     }
-    
-    // Forward to store's setFilter, but don't apply yet
-    const column = columns.find((col) => col.key === name);
-    const operator = column?.filterType === 'select' ? 'equals' : 'contains';
 
-    if (name === 'status' && value === '') {
-      setFilter(name, 'equals', null);
-    } else if (name === 'status') {
-      setFilter(name, 'equals', value === 'true');
-    } else {
-      setFilter(name, filterConfig.fields[name]?.defaultOperator || operator, value);
-    }
+    // Forward to parent handler
+    handleInputChange(e);
   };
 
-  // Handle date change
+  // Handle date change - only update local state, not the store
   const handleDateChange = (value: CalendarDate | null, name: string) => {
     // Create ISO string with proper time to prevent date shifting
     let dateString = '';
@@ -170,27 +178,13 @@ export default function FilterModal({
       return updatedFilters;
     });
 
-    // Pass the date value to the store's setRangeFilter
-    if (name.startsWith('min')) {
-      const minDate = dateString ? new Date(dateString) : undefined;
-      const maxDate = getFilterValue(fieldName)?.max;
-      setRangeFilter(
-        fieldName,
-        minDate,
-        maxDate ? new Date(maxDate) : undefined
-      );
-    } else if (name.startsWith('max')) {
-      const minDate = getFilterValue(fieldName)?.min;
-      const maxDate = dateString ? new Date(dateString) : undefined;
-      setRangeFilter(
-        fieldName,
-        minDate ? new Date(minDate) : undefined,
-        maxDate
-      );
-    } else {
-      // Regular date field
-      setFilter(fieldName, 'equals', dateString ? new Date(dateString) : null);
-    }
+    // Pass the date value to the parent component's handler
+    handleInputChange({
+      target: {
+        name,
+        value: dateString
+      }
+    } as React.ChangeEvent<HTMLInputElement>);
   };
 
   // Parse date value to CalendarDate
@@ -242,7 +236,46 @@ export default function FilterModal({
     return localFilters[fieldKey] !== undefined ? localFilters[fieldKey] : getFilterValue(fieldKey);
   };
 
-  // Handle form submission from modal - FIXED TO PREVENT DOUBLE FETCH
+  // Apply all local filters to the Zustand store
+  const applyLocalFiltersToStore = () => {
+    // First set the search filter if it exists
+    if (localSearchValue) {
+      setFilter('search', 'contains', localSearchValue);
+    } else {
+      setFilter('search', 'contains', '');
+    }
+    
+    // Process all other filters
+    Object.entries(localFilters).forEach(([key, value]) => {
+      if (key === 'search') return; // Skip search as we already handled it
+      
+      const column = columns.find((col) => col.key === key);
+      
+      if (!column) return;
+      
+      if (typeof value === 'object' && (value.min !== undefined || value.max !== undefined)) {
+        // Handle range filters
+        setRangeFilter(
+          key,
+          value.min ? new Date(value.min) : undefined,
+          value.max ? new Date(value.max) : undefined
+        );
+      } else if (key === 'status') {
+        // Handle status filter
+        if (value === '') {
+          setFilter(key, 'equals', null);
+        } else {
+          setFilter(key, 'equals', value === 'true');
+        }
+      } else {
+        // Handle standard filters
+        const operator = column.filterType === 'select' ? 'equals' : 'contains';
+        setFilter(key, filterConfig.fields[key]?.defaultOperator || operator, value);
+      }
+    });
+  };
+
+  // Handle form submission from modal
   const handleModalSubmit = (e: FormEvent) => {
     e.preventDefault();
     
@@ -253,6 +286,9 @@ export default function FilterModal({
     
     // Set submitting flag
     isSubmittingRef.current = true;
+    
+    // Apply all local filters to the store
+    applyLocalFiltersToStore();
     
     // Close the modal first
     onClose();
@@ -270,7 +306,7 @@ export default function FilterModal({
     }, 100);
   };
 
-  // Handle clear filters from modal - FIXED TO PREVENT DOUBLE FETCH
+  // Handle clear filters from modal
   const handleClearFilters = () => {
     // Check if we're already submitting
     if (isSubmittingRef.current) {
@@ -299,8 +335,135 @@ export default function FilterModal({
     }, 100);
   };
 
-  // Compute search value from store or local state
-  const searchValue = isOpen ? localSearchValue : (getFilterValue('search') || '');
+  const renderFilterField = (column: DataTableColumn<any>) => {
+    if (column.key === 'search') return null;
+    
+    const fieldConfig = filterConfig.fields[column.key];
+    if (!fieldConfig) return null;
+
+    const filterValue = getCurrentValue(column.key);
+    const dateRange = filterValue && typeof filterValue === 'object' ? filterValue : { min: '', max: '' };
+    
+    switch (column.filterType) {
+      case 'select':
+        return (
+          <div key={column.key}>
+            <Select
+              placeholder={`Select ${column.header}`}
+              label={column.header}
+              labelPlacement="outside"
+              name={column.key}
+              defaultSelectedKeys={filterValue !== undefined ? [String(filterValue)] : []}
+              selectedKeys={filterValue !== undefined ? [String(filterValue)] : []}
+              onChange={handleLocalInputChange}
+              variant="bordered"
+              className="w-full"
+              aria-label={`Filter by ${column.header}`}
+            >
+              <SelectItem key="" textValue="All">All</SelectItem>
+              <>{(column.filterOptions || []).map((option) => (
+                <SelectItem 
+                  key={String(option.value)} 
+                  textValue={option.label}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}</>
+              
+            </Select>
+          </div>
+        );
+      
+      case 'dateRange':
+        return (
+          <div key={column.key} className="col-span-1 sm:col-span-2 md:col-span-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <DatePicker
+                  label={`${column.header} From`}
+                  name={`min${column.key}`}
+                  value={parseDateValue(dateRange.min)}
+                  onChange={(value) => handleDateChange(value, `min${column.key}`)}
+                  variant="bordered"
+                  className="w-full"
+                  labelPlacement="outside"
+                  aria-label={`${column.header} start date`}
+                />
+              </div>
+              <div>
+                <DatePicker
+                  label={`${column.header} To`}
+                  name={`max${column.key}`}
+                  value={parseDateValue(dateRange.max)}
+                  onChange={(value) => handleDateChange(value, `max${column.key}`)}
+                  variant="bordered"
+                  className="w-full"
+                  labelPlacement="outside"
+                  aria-label={`${column.header} end date`}
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'checkbox':
+        return (
+          <div key={column.key}>
+            <Select
+              placeholder={`Select ${column.header}`}
+              label={column.header}
+              labelPlacement="outside"
+              name={column.key}
+              defaultSelectedKeys={filterValue !== undefined ? [String(filterValue)] : []}
+              selectedKeys={filterValue !== undefined ? [String(filterValue)] : []}
+              onChange={handleLocalInputChange}
+              variant="bordered"
+              className="w-full"
+              aria-label={`Filter by ${column.header}`}
+            >
+              <SelectItem key="" textValue="All">All</SelectItem>
+              <SelectItem key="true" textValue="Yes">Yes</SelectItem>
+              <SelectItem key="false" textValue="No">No</SelectItem>
+            </Select>
+          </div>
+        );
+
+      case 'date':
+        return (
+          <div key={column.key}>
+            <DatePicker
+              label={column.header}
+              name={column.key}
+              value={parseDateValue(filterValue)}
+              onChange={(value) => handleDateChange(value, column.key)}
+              variant="bordered"
+              className="w-full"
+              labelPlacement="outside"
+              aria-label={`Select ${column.header} date`}
+            />
+          </div>
+        );
+
+      // Text input (default)
+      default:
+        return (
+          <div key={column.key}>
+            <Input
+              type="text"
+              label={column.header}
+              labelPlacement="outside"
+              name={column.key}
+              value={filterValue || ''}
+              onChange={handleLocalInputChange}
+              variant="bordered"
+              className="w-full"
+              placeholder={`Search by ${column.header.toLowerCase()}...`}
+              aria-label={`Search by ${column.header}`}
+            />
+          </div>
+        );
+    }
+  };
 
   return (
     <>
@@ -349,142 +512,7 @@ export default function FilterModal({
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {/* Filter Fields */}
-                  {filterableColumns.map((column) => {
-                    if (column.key === 'search') return null; // Skip search as we have a separate field for it
-                    
-                    const fieldConfig = filterConfig.fields[column.key];
-                    if (!fieldConfig) return null;
-
-                    // Get values from local state or fall back to store
-                    const filterValue = getCurrentValue(column.key);
-                    const dateRange = filterValue && typeof filterValue === 'object' ? filterValue : { min: '', max: '' };
-                    
-                    switch (column.filterType) {
-                      case 'select':
-                        return (
-                          <div key={column.key}>
-                            <Select
-                              placeholder={`Select ${column.header}`}
-                              label={column.header}
-                              labelPlacement="outside"
-                              name={column.key}
-                              defaultSelectedKeys={filterValue !== undefined ? [String(filterValue)] : []}
-                              selectedKeys={filterValue !== undefined ? [String(filterValue)] : []}
-                              onChange={handleLocalInputChange}
-                              variant="bordered"
-                              className="w-full"
-                              aria-label={`Filter by ${column.header}`}
-                            >
-                              <SelectItem key="" textValue="All">All</SelectItem>
-                              <>{(column.filterOptions || []).map((option) => (
-                                <SelectItem 
-                                  key={String(option.value)} 
-                                  textValue={option.label}
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}</>
-                              
-                            </Select>
-                          </div>
-                        );
-                      
-                      case 'dateRange':
-                        return (
-                          <div key={column.key} className="col-span-1 sm:col-span-2 md:col-span-3">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <DatePicker
-                                  label={`${column.header} From`}
-                                  name={`min${column.key}`}
-                                  value={parseDateValue(dateRange.min)}
-                                  onChange={(value) => handleDateChange(value, `min${column.key}`)}
-                                  variant="bordered"
-                                  className="w-full"
-                                  labelPlacement="outside"
-                                  aria-label={`${column.header} start date`}
-                                />
-                              </div>
-                              <div>
-                                <DatePicker
-                                  label={`${column.header} To`}
-                                  name={`max${column.key}`}
-                                  value={parseDateValue(dateRange.max)}
-                                  onChange={(value) => handleDateChange(value, `max${column.key}`)}
-                                  variant="bordered"
-                                  className="w-full"
-                                  labelPlacement="outside"
-                                  aria-label={`${column.header} end date`}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        );
-    
-                      case 'checkbox':
-                        return (
-                          <div key={column.key}>
-                            <Select
-                              placeholder={`Select ${column.header}`}
-                              label={column.header}
-                              labelPlacement="outside"
-                              name={column.key}
-                              defaultSelectedKeys={filterValue !== undefined ? [String(filterValue)] : []}
-                              selectedKeys={filterValue !== undefined ? [String(filterValue)] : []}
-                              onChange={handleLocalInputChange}
-                              variant="bordered"
-                              className="w-full"
-                              aria-label={`Filter by ${column.header}`}
-                            >
-                              <SelectItem key="" textValue="All">
-                                All
-                              </SelectItem>
-                              <SelectItem key="true" textValue="Yes">
-                                Yes
-                              </SelectItem>
-                              <SelectItem key="false" textValue="No">
-                                No
-                              </SelectItem>
-                            </Select>
-                          </div>
-                        );
-    
-                      case 'date':
-                        return (
-                          <div key={column.key}>
-                            <DatePicker
-                              label={column.header}
-                              name={column.key}
-                              value={parseDateValue(filterValue)}
-                              onChange={(value) => handleDateChange(value, column.key)}
-                              variant="bordered"
-                              className="w-full"
-                              labelPlacement="outside"
-                              aria-label={`Select ${column.header} date`}
-                            />
-                          </div>
-                        );
-    
-                      // Text input (default)
-                      default:
-                        return (
-                          <div key={column.key}>
-                            <Input
-                              type="text"
-                              label={column.header}
-                              labelPlacement="outside"
-                              name={column.key}
-                              value={filterValue || ''}
-                              onChange={handleLocalInputChange}
-                              variant="bordered"
-                              className="w-full"
-                              placeholder={`Search by ${column.header.toLowerCase()}...`}
-                              aria-label={`Search by ${column.header}`}
-                            />
-                          </div>
-                        );
-                    }
-                  })}
+                  {filterableColumns.map(renderFilterField)}
                   
                   {/* Additional Filter Fields */}
                   {additionalFilterFields && additionalFilterFields.map((field, index) => (

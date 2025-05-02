@@ -39,7 +39,7 @@ export const productSchema = z.object({
   //     .optional()
   //     .default([]),
 
-  tags: z.any(z.string()).optional().default([]),
+  tags: z.array(z.string()).optional().default([]),
 });
 
 // Type for Product form values
@@ -61,32 +61,31 @@ export const productUpdateSchema = productSchema
     message: 'At least one field must be provided for update',
   });
 
-// Schema for filtering products //TODO: need to further work
+// Schema for filtering products
 export const productFilterSchema = z.object({
   name: z.string().optional(),
-  minPrice: z.coerce.number().optional(),
-  maxPrice: z.coerce.number().optional(),
   category: z.string().optional(),
-  inStock: z.boolean().optional(),
+  price: z.coerce.number().optional(),
+  stock: z.coerce.number().optional(),
   featured: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
-  page: z.coerce.number().positive().optional(),
-  pageSize: z.coerce.number().positive().optional(),
-  sortField: z.string().optional(),
-  sortDirection: z.enum(['asc', 'desc']).optional(),
 });
 
+export type CreateProductInput = z.infer<typeof productCreateSchema>;
+export type UpdateProductInput = z.infer<typeof productUpdateSchema>;
+export type ProductFilterInput = z.infer<typeof productFilterSchema>;
+
 export const productFilterConfig: FilterConfig = {
-  fields: {
-    name: { type: 'string', defaultOperator: 'contains', urlParam: 'search' },
-    category: { type: 'string', defaultOperator: 'equals' },
-    price: { type: 'number' },
-    tag: { type: 'string', defaultOperator: 'contains', urlParam: 'tag' },
-    stock: { type: 'number' },
-    featured: { type: 'boolean' },
-  },
-  defaultPageSize: 12,
+  defaultPageSize: 10,
   defaultSort: { field: 'createdAt', direction: 'desc' as const },
+  fields: {
+    name: { type: 'string', defaultOperator: 'contains' },
+    category: { type: 'string', defaultOperator: 'equals' },
+    price: { type: 'number', defaultOperator: 'gte' },
+    stock: { type: 'number', defaultOperator: 'gte' },
+    featured: { type: 'boolean', defaultOperator: 'equals' },
+    createdAt: { type: 'date', defaultOperator: 'equals' },
+  },
 };
 
 export default productSchema;

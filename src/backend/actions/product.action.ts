@@ -1,6 +1,6 @@
 'use server';
 import { Product, Prisma } from '@prisma/client';
-import { z } from 'zod';
+import { z, ZodType } from 'zod';
 import productSchema, {
   productCreateSchema,
   productFilterConfig,
@@ -17,11 +17,10 @@ const productRelationalConfig: RelationalFilterConfig = {
   defaultSort: productFilterConfig.defaultSort,
   fields: {
     ...productFilterConfig.fields,
-    name: { type: 'string', defaultOperator: 'contains', urlParam: 'search' },
-    tag: { type: 'string', defaultOperator: 'contains', urlParam: 'tag' },
   },
-  // Define search fields explicitly
-  searchFields: [{ field: 'name' }, { field: 'description' }],
+  include: {
+    // Add any relations here if needed
+  },
 };
 
 class ProductServerAction extends RelationalServerAction<
@@ -32,7 +31,7 @@ class ProductServerAction extends RelationalServerAction<
   ProductService
 > {
   constructor(
-    schema: z.ZodType<ProductFormValues> = productSchema,
+    schema: z.ZodType<ProductFormValues> = productSchema as ZodType<ProductFormValues>,
     service: ProductService = new ProductService()
   ) {
     super(schema, service, productRelationalConfig);
@@ -230,24 +229,29 @@ class ProductServerAction extends RelationalServerAction<
 const productActionInstance = new ProductServerAction();
 
 // Export server actions for use in components and API routes
-export async function createProduct(formData: FormData) {
+export async function createProduct(prevState: ActionResult<Product>, formData: FormData) {
+  console.log('createProduct action>>', formData);
   return productActionInstance.create(formData);
 }
 
-export async function updateProduct(id: string, formData: FormData) {
+export async function updateProduct(prevState: ActionResult<Product>, id: string | number, formData: FormData) {
   return productActionInstance.update(id, formData);
 }
 
-export async function deleteProduct(id: string) {
+export async function deleteProduct(id: string | number) {
   return productActionInstance.delete(id);
 }
 
-export async function getProduct(id: string) {
-  return productActionInstance.getById(id);
+export async function getProductById(id: string | number) {
+  return productActionInstance.findOne({ where: { id } });
 }
 
 export async function getProductsWithFilter(formData: FormData) {
   return productActionInstance.getItemsWithFilter(formData);
+}
+
+export async function getAllProducts(filters: any) {
+  return productActionInstance.getAll(filters);
 }
 
 export async function getProductCategories() {

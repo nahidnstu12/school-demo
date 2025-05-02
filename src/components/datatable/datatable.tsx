@@ -13,9 +13,9 @@ import {
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { ActionResult } from '@/backend/actions/IServerAction';
 import { FilterConfig } from '@/utils/filter-helpers';
-import { useFilterStore, useSyncUrlWithFilterStore } from '@/stores/useFilterStore';
+import { useFilterStore } from '@/stores/useFilterStore';
+import { useSyncUrlWithFilterStore } from '@/stores/hooks/useSyncUrlWithFilterStore';
 
-// Import modular components
 import { TopContent } from './TopContent';
 import { TableHeader as TableHeaderComponent } from './TableHeader';
 import { BottomContent } from './BottomContent';
@@ -212,7 +212,8 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
 
     // Compare current URL with the last one we processed
     const currentUrl = window.location.search;
-    if (currentUrl === lastFetchUrl && refreshToken === 0) {
+    
+    if (currentUrl === lastFetchUrl && refreshToken === 0 && lastFetchUrl !== '') {
       console.log('Skipping fetch, URL unchanged:', currentUrl);
       return;
     }
@@ -224,7 +225,7 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
         fetchDataWithFilters();
       }
     }, 50);
-  }, [filters, page, pageSize, isSubmitting, lastFetchUrl, refreshToken]);
+  }, [page, pageSize, isSubmitting, lastFetchUrl, refreshToken]);
 
   // Handle form input changes (only updates form state, not URL)
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
