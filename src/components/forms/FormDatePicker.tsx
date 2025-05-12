@@ -84,7 +84,7 @@ export function FormDatePicker({
   };
   
   return (
-    <div>
+    <div className={`w-full ${className}`}>
       <Controller
         name={name}
         control={control}

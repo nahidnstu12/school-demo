@@ -6,15 +6,14 @@ import { getSubjectsWithFilter } from '@/backend/actions/subject.action';
 import { DataTable } from '@/components/datatable/datatable';
 import { DataTableColumn } from '@/components/datatable/types';
 import SubjectDrawer from '@/components/modules/subject/Drawer';
-import useTeacherDrawer from '@/hooks/useDrawer';
+import useDrawer from '@/hooks/useDrawer';
 import { subjectFilterConfig } from '@/schemas/subject';
+import { useFilterStore } from '@/stores/useFilterStore';
+import { FilterConfig } from '@/utils/filter-helpers';
 import { Button, Chip, Input } from '@heroui/react';
 import { Level } from '@prisma/client';
 import { Edit, Eye, Trash } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { useFilterStore } from '@/stores/useFilterStore';
-import { FilterConfig } from '@/utils/filter-helpers';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Define subject type with necessary fields for display
 interface ISubject {
@@ -30,8 +29,7 @@ interface ISubject {
 }
 
 export default function SubjectList() {
-  const { isOpen, mode, itemId, openDrawer, closeDrawer } = useTeacherDrawer();
-  const router = useRouter();
+  const { isOpen, mode, itemId, openDrawer, closeDrawer } = useDrawer();
 
   // State for filter options
   const [institutionId, setInstitutionId] = useState<string>('');
@@ -119,18 +117,18 @@ export default function SubjectList() {
 
   // Define columns for the table with all cell rendering logic
   const columns: DataTableColumn<ISubject>[] = [
-    // {
-    //   key: 'name',
-    //   header: 'Name',
-    //   sortable: true,
-    //   filterable: true, // We can use the filter modal now
-    //   filterType: 'text',
-    //   cell: (subject: ISubject) => (
-    //     <div className="flex flex-col">
-    //       <p className="text-bold text-small">{subject.name}</p>
-    //     </div>
-    //   ),
-    // },
+    {
+      key: 'name',
+      header: 'Name',
+      sortable: true,
+      filterable: false, // We can use the filter modal now
+      filterType: 'text',
+      cell: (subject: ISubject) => (
+        <div className="flex flex-col">
+          <p className="text-bold text-small">{subject.name}</p>
+        </div>
+      ),
+    },
     {
       key: 'institutionId',
       header: 'Institution',

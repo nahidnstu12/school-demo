@@ -73,7 +73,7 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
     pageSize,
     isSubmitting,
     lastFetchUrl,
-    appliedFiltersCount,
+    appliedFiltersCount, // can remove this
     setFilter,
     setRangeFilter,
     applyFilters,
@@ -390,11 +390,11 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
           filterConfig={filterConfig}
           getFilterValue={getFilterValue}
           handleInputChange={handleInputChange}
-          handleSubmit={handleSubmit}
-          clearFilters={handleClearFilters}
-          sortValue={sortValue}
-          handleSortChange={handleSortChange}
-          searchValue={searchValue}
+          // handleSubmit={handleSubmit}
+          // clearFilters={handleClearFilters}
+          // sortValue={sortValue}
+          // handleSortChange={handleSortChange}
+          // searchValue={searchValue}
           appliedFiltersCount={appliedFiltersCount}
           visibleColumns={visibleColumns}
           setVisibleColumns={setVisibleColumns}

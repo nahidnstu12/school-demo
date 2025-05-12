@@ -29,6 +29,7 @@ export function FormInput({
     control, 
     formState: { errors } 
   } = useFormContext();
+
   
   // Get server errors if they exist
   const getServerErrors = (fieldName: string): string[] | undefined => {
@@ -49,14 +50,14 @@ export function FormInput({
   const hasError = !!fieldErrors || !!serverFieldErrors;
   const errorMessage = fieldErrors?.message as string || serverFieldErrors?.join(", ");
 
-  if(errors?.[name]) {
-    console.log('errors>>', name, errors?.[name]?.message);
-  }
-  if(getServerErrors(name)) {
-    console.log('server errors>>', name, getServerErrors(name));
-  }
+  // if(errors?.[name]) {
+  //   console.log('errors>>', name, errors?.[name]?.message);
+  // }
+  // if(getServerErrors(name)) {
+  //   console.log('server errors>>', name, getServerErrors(name));
+  // }
   return (
-    <div>
+    <div className="w-full">
       <Controller
         name={name}
         control={control}

@@ -39,7 +39,7 @@ export function FormCheckbox({
   };
   
   return (
-    <div className={className}>
+    <div className={`w-full ${className}`}>
       <Controller
         name={name}
         control={control}

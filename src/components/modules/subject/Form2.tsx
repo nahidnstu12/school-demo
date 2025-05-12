@@ -1,24 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, startTransition } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useActionState } from "react";
-import { Spinner } from "@heroui/react";
-import { createSubject, getSubjectById, updateSubject } from "@/backend/actions/subject.action";
 import { getAllInstitutions } from "@/backend/actions/institution.action";
-import { getAllLevels } from "@/backend/actions/level.action";
 import { ActionResult } from "@/backend/actions/IServerAction";
-import { Subject } from "@prisma/client";
-import { subjectSchema } from "@/schemas/subject";
+import { getAllLevels } from "@/backend/actions/level.action";
+import { createSubject, getSubjectById, updateSubject } from "@/backend/actions/subject.action";
+import { FormCheckbox } from "@/components/forms/FormCheckbox";
 import { FormProvider } from "@/components/forms/FormContainer";
 import { FormInput } from "@/components/forms/FormInput";
 import { FormNumberInput } from "@/components/forms/FormNumberInput";
-import { FormTextarea } from "@/components/forms/FormTextarea";
 import { FormSelect } from "@/components/forms/FormSelect";
-import { FormCheckbox } from "@/components/forms/FormCheckbox";
+import { FormTextarea } from "@/components/forms/FormTextarea";
 import { useFormData } from '@/hooks/useFormData';
 import { useFormOptions } from '@/hooks/useFormOptions';
+import { subjectSchema } from "@/schemas/subject";
+import { Spinner } from "@heroui/react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Subject } from "@prisma/client";
+import { useActionState, useEffect, useMemo } from "react";
+import { useForm } from "react-hook-form";
 
 export type DrawerMode = "create" | "read" | "edit";
 
@@ -45,7 +44,6 @@ export function SubjectForm({
   isReadOnly = false, 
   onSuccess 
 }: SubjectFormProps) {
-  // Initialize action state
   const initialState: ActionResult<Subject> = {
     success: false,
     errors: [],
@@ -61,8 +59,7 @@ export function SubjectForm({
   // Set up React Hook Form with Zod resolver
   const methods = useForm<SubjectData>({
     resolver: zodResolver(subjectSchema),
-    mode: "onSubmit",
-    reValidateMode: "onChange",
+    mode: "onChange",
     defaultValues: {
       name: "",
       code: "",
@@ -177,10 +174,14 @@ export function SubjectForm({
     label: level.name
   })) || [];
 
+  // console.log("server errors>>", state.errors);
+  // console.log("client errors>>", methods.formState.errors);
+  
+
   return (
     <FormProvider
       methods={methods}
-      onSubmit={formAction}
+      actionMethod={formAction}
       isReadOnly={isReadOnly}
       isPending={isPending}
       serverErrors={state.errors}
@@ -208,7 +209,7 @@ export function SubjectForm({
         name="creditHours"
         label="Credit Hours"
         placeholder="Enter credit hours"
-        min={0}
+        // min={0}
         isRequired
         isDisabled={isReadOnly || isPending}
       />

@@ -1,11 +1,10 @@
-// components/ui/form/FormProvider.tsx
-import React from "react";
-import { FormProvider as RHFFormProvider, UseFormReturn, FieldValues, Path } from "react-hook-form";
-import { Button, Spinner } from "@heroui/react";
+import { Button, Form } from "@heroui/react";
+import React, { useRef } from "react";
+import { FieldValues, Path, FormProvider as RHFFormProvider, UseFormReturn } from "react-hook-form";
 
 interface FormProviderProps<T extends FieldValues> {
   methods: UseFormReturn<T>;
-  onSubmit: (formData: FormData) => void | Promise<void>;
+  actionMethod: (formData: FormData) => void | Promise<void>;
   children: React.ReactNode;
   submitText?: string;
   isReadOnly?: boolean;
@@ -18,7 +17,7 @@ interface FormProviderProps<T extends FieldValues> {
 
 export function FormProvider<T extends FieldValues>({
   methods,
-  onSubmit,
+  actionMethod,
   children,
   submitText = "Submit",
   isReadOnly = false,
@@ -62,10 +61,21 @@ export function FormProvider<T extends FieldValues>({
       error.field === "unknown" || 
       typeof error.field === "number"
   );
+
+  const hiddenSubmitRef = useRef<HTMLButtonElement>(null);
+  const handleValidateAndSubmit = async () => {
+    const isValid = await methods.trigger();
+    if (isValid) {
+      hiddenSubmitRef.current?.click(); // Triggers native formAction via hidden submit button
+    }
+  };
   
   return (
     <RHFFormProvider {...enhancedMethods}>
-      <form action={onSubmit} className={`space-y-6 ${className}`}>
+      <Form
+        action={actionMethod}
+        className={`space-y-6 ${className}`}>
+      {/* <form action={actionMethod} className={`space-y-6 ${className}`}> */}
         {/* Form-level errors */}
         {formErrors.length > 0 && (
           <div className="p-3 mb-4 text-sm text-white bg-red-500 rounded-md">
@@ -74,6 +84,7 @@ export function FormProvider<T extends FieldValues>({
             ))}
           </div>
         )}
+        <button type="submit" ref={hiddenSubmitRef} hidden />
         
         {/* Form fields */}
         {children}
@@ -86,6 +97,7 @@ export function FormProvider<T extends FieldValues>({
               color="primary" 
               isLoading={isPending} 
               isDisabled={isPending}
+              onPress={handleValidateAndSubmit}
             >
               {submitText}
             </Button>
@@ -98,7 +110,8 @@ export function FormProvider<T extends FieldValues>({
             {successMessage}
           </div>
         )}
-      </form>
+      {/* </form> */}
+      </Form>
     </RHFFormProvider>
   );
 }

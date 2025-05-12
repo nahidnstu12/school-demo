@@ -75,7 +75,7 @@ export default function SubjectDrawer({
               Close
             </Button>
 
-            {mode === 'read' && (
+            {/* {mode === 'read' && (
               <Button
                 color="primary"
                 onPress={() => {
@@ -85,7 +85,7 @@ export default function SubjectDrawer({
               >
                 Edit
               </Button>
-            )}
+            )} */}
           </div>
         </DrawerFooter>
       </DrawerContent>

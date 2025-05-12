@@ -13,11 +13,11 @@ interface TopContentProps<T> {
   filterConfig: FilterConfig;
   getFilterValue: (field: string) => any;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-  handleSubmit: (e: React.FormEvent) => void;
-  clearFilters: () => void;
-  sortValue: string;
-  handleSortChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  searchValue: string;
+  // handleSubmit: (e: React.FormEvent) => void;
+  // clearFilters: () => void;
+  // sortValue: string;
+  // handleSortChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  // searchValue: string;
   appliedFiltersCount: number;
   visibleColumns: Selection;
   setVisibleColumns: (keys: Selection) => void;
@@ -31,11 +31,11 @@ export function TopContent<T>({
   filterConfig,
   getFilterValue,
   handleInputChange,
-  handleSubmit,
-  clearFilters,
-  sortValue,
-  handleSortChange,
-  searchValue,
+  // handleSubmit,
+  // clearFilters,
+  // sortValue,
+  // handleSortChange,
+  // searchValue,
   appliedFiltersCount,
   visibleColumns,
   setVisibleColumns,
@@ -56,11 +56,11 @@ export function TopContent<T>({
             filterConfig={filterConfig}
             getFilterValue={getFilterValue}
             handleInputChange={handleInputChange}
-            handleSubmit={handleSubmit}
-            clearFilters={clearFilters}
-            sortValue={sortValue}
-            handleSortChange={handleSortChange}
-            searchValue={searchValue}
+            // handleSubmit={handleSubmit}
+            // clearFilters={clearFilters}
+            // sortValue={sortValue}
+            // handleSortChange={handleSortChange}
+            // searchValue={searchValue}
             appliedFiltersCount={appliedFiltersCount}
             additionalFilterFields={additionalFilters}
           />

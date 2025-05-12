@@ -23,11 +23,11 @@ interface FilterModalProps {
   filterConfig: FilterConfig;
   getFilterValue: (field: string) => any;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-  handleSubmit: (e: React.FormEvent) => void;
-  clearFilters: () => void;
-  sortValue: string;
-  handleSortChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  searchValue: string;
+  // handleSubmit: (e: React.FormEvent) => void;
+  // clearFilters: () => void;
+  // sortValue: string;
+  // handleSortChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  // searchValue: string;
   appliedFiltersCount: number;
   additionalFilterFields?: React.ReactNode[];
 }
@@ -39,11 +39,11 @@ export default function FilterModal({
   filterConfig,
   getFilterValue,
   handleInputChange,
-  handleSubmit,
-  clearFilters,
-  sortValue,
-  handleSortChange,
-  searchValue,
+  // handleSubmit,
+  // clearFilters,
+  // sortValue,
+  // handleSortChange,
+  // searchValue,
   appliedFiltersCount,
   additionalFilterFields
 }: FilterModalProps) {
@@ -496,8 +496,9 @@ export default function FilterModal({
               <ModalHeader className="flex flex-col gap-1">Filters</ModalHeader>
               <ModalBody>
                 {/* Global Search */}
-                <div className="w-full mb-4">
-                  <Input
+                {filterConfig?.fields?.search && (
+                  <div className="w-full mb-4">
+                    <Input
                     label="Global Search"
                     isClearable
                     className="w-full"
@@ -509,6 +510,7 @@ export default function FilterModal({
                     aria-label="Global search across all columns"
                   />
                 </div>
+                )}
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {/* Filter Fields */}
