@@ -41,6 +41,10 @@ class TeacherDTO {
       designation: teacher.designation,
       joiningDate: teacher.joiningDate,
       status: teacher.status,
+      userId: teacher.user.id,
+      address: teacher.address,
+      district: teacher.district,
+      specialization: teacher.specialization,
       // Can add computed properties here
       yearsOfService: teacher.joiningDate
         ? Math.floor(

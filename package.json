@@ -9,8 +9,7 @@
     "build:prod": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
-    "lint": "next lint",
-    "prepare": "husky"
+    "lint": "next lint"
   },
   "prisma": {
     "seed": "bun prisma/seed.ts"
@@ -57,7 +56,6 @@
     "@typescript-eslint/parser": "^8.25.0",
     "eslint": "^9.21.0",
     "eslint-config-next": "15.2.0",
-    "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "postcss": "^8.5.3",
     "prettier": "^3.5.2",

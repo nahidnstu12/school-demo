@@ -13,12 +13,31 @@ export const teacherFormSchema = z.object({
   institutionId: z.string().min(1, { message: 'Institution is required' }),
   designation: z.string().min(1, { message: 'Designation is required' }),
   pdsId: z.string().optional(),
-  joiningDate: z.string().optional().nullable(),
+  joiningDate: z.preprocess(
+    (val) => {
+      if (!val) return null;
+      if (val instanceof Date) return val.toISOString().split('T')[0];
+      if (typeof val === 'string') return val;
+      return null;
+    },
+    z.string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Date must be in YYYY-MM-DD format' })
+      .nullable()
+  ),
   address: z.string().optional(),
   district: z.string().optional(),
   specialization: z.string().optional(),
-  status: z.boolean().default(true),
-  teacherId: z.string().optional(), // Added for edit mode
+  status: z.preprocess(
+    (val) => {
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'string') {
+        return val === 'true' || val === 'on';
+      }
+      return false;
+    },
+    z.boolean()
+  ),
+  userId: z.string().optional(), // Added for edit mode
 });
 
 // The form values type
@@ -43,7 +62,10 @@ export type InstitutionData = {
 export type TeacherWithUser = {
   id: string;
   userId: string;
-  user: UserData;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
   institution: InstitutionData;
   institutionId: string;
   designation: string;
@@ -58,18 +80,7 @@ export type TeacherWithUser = {
   deletedAt: Date | null;
 };
 
-// The actual Teacher model schema (for reference/validation)
-export const teacherSchema = z.object({
-  userId: z.string(),
-  institutionId: z.string(),
-  designation: z.string(),
-  joiningDate: z.date().optional().nullable(),
-  address: z.string().optional(),
-  district: z.string().optional(),
-  specialization: z.string().optional(),
-  pdsId: z.string().optional(),
-  status: z.boolean().default(true),
-});
+
 
 // Export the filter configuration
 export const teacherFilterConfig: FilterConfig = {

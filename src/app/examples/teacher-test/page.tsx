@@ -1,4 +1,4 @@
-import TeacherList from "@/components/modules/teacher/TeacherlistV2";
+import TeacherList from "@/components/modules/teacher/List";
 
 
 export default function page() {

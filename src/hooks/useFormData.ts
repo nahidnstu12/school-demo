@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 export // Truly reusable useFormData hook
 function useFormData<T>(
-  fetchFunction: (id: string) => Promise<ActionResult<T>>,
+  fetchFunction: (id: string) => Promise<ActionResult<T | null>> | null,
   id?: string,
   enabled: boolean = true
 ) {
@@ -24,11 +24,11 @@ function useFormData<T>(
       setIsLoading(true);
       try {
         const result = await fetchFunction(id);
-        if (result.success) {
+        if (result && result.success) {
           setData(result.data);
           setError(null);
         } else {
-          setError(result.errors?.[0]?.message || 'Failed to load data');
+          setError(result?.errors?.[0]?.message || 'Failed to load data');
           setData(null);
         }
       } catch (err) {
