@@ -18,10 +18,10 @@ class ProductService extends BaseService<
   /**
    * Get distinct product categories
    */
-  async getDistinctCategories(): Promise<string[]> {
-    const model = this.model as ProductModel;
-    return await model.getDistinctCategories();
-  }
+  // async getDistinctCategories(): Promise<string[]> {
+  //   const model = this.model as ProductModel;
+  //   return await model.getDistinctCategories();
+  // }
 
   /**
    * Get distinct product tags
@@ -112,7 +112,7 @@ class ProductService extends BaseService<
     // Find products in the same category, excluding this one
     const relatedProducts = await this.model.findMany({
       where: {
-        category: product.category,
+        categoryId: product.categoryId,
         id: {
           not: productId,
         },

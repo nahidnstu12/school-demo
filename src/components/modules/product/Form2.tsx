@@ -35,7 +35,7 @@ export type ProductData = {
   category: string;
   stock: number;
   sku?: string;
-  featured: boolean;
+  featured?: boolean;
   tags: string[];
 };
 
@@ -61,8 +61,7 @@ export function ProductForm({
   // Set up React Hook Form with Zod resolver
   const methods = useForm<ProductData>({
     resolver: zodResolver(productSchema),
-    mode: "onSubmit",
-    reValidateMode: "onChange",
+    mode: "onChange",
     defaultValues: {
       name: "",
       description: "",
@@ -125,7 +124,7 @@ export function ProductForm({
         name: productData.name || "",
         description: productData.description || "",
         price: Number(productData.price) || 0,
-        category: productData.category || "",
+        category: productData.categoryId || "",
         stock: productData.stock || 0,
         sku: productData.sku || "",
         featured: productData.featured || false,
@@ -160,9 +159,9 @@ export function ProductForm({
   })) || [];
 
   return (
-    <FormProvider
+    <FormProvider<ProductData>
       methods={methods}
-      onSubmit={formAction}
+      actionMethod={formAction}
       isReadOnly={isReadOnly}
       isPending={isPending}
       serverErrors={state.errors}
@@ -190,7 +189,6 @@ export function ProductForm({
         label="Price"
         placeholder="Enter price"
         min={0}
-        step={0.01}
         isRequired
         isDisabled={isReadOnly || isPending}
       />

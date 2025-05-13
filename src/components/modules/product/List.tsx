@@ -1,18 +1,16 @@
 'use client';
 
-import { getProductsWithFilter } from '@/backend/actions/product.action';
+import { getProductCategories, getProductsWithFilter } from '@/backend/actions/product.action';
 import { DataTable } from '@/components/datatable/datatable';
 import { DataTableColumn } from '@/components/datatable/types';
 import ProductDrawer from '@/components/modules/product/Drawer';
-import useTeacherDrawer from '@/hooks/useDrawer';
+import useDrawer from '@/hooks/useDrawer';
 import { productFilterConfig } from '@/schemas/product';
-import { Button, Chip, Input } from '@heroui/react';
-import { Edit, Eye, Trash } from 'lucide-react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useFilterStore } from '@/stores/useFilterStore';
 import { FilterConfig } from '@/utils/filter-helpers';
+import { Button, Chip, Input, Select, SelectItem } from '@heroui/react';
+import { Edit, Eye, Trash } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Define product type with necessary fields for display
 interface IProduct {
@@ -24,13 +22,13 @@ interface IProduct {
   status: boolean;
   featured: boolean;
   categoryId: string;
-  categoryName?: string;
+  categoryName: string;
   images?: { url: string }[];
 }
 
 export default function ProductList() {
-  const { isOpen, mode, itemId, openDrawer, closeDrawer } = useTeacherDrawer();
-  const router = useRouter();
+  const { isOpen, mode, itemId, openDrawer, closeDrawer } = useDrawer();
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
 
   // Reference to the DataTable's refetch function
   const dataTableRef = useRef<{
@@ -44,6 +42,17 @@ export default function ProductList() {
   useEffect(() => {
     setConfig(productFilterConfig as FilterConfig);
   }, [setConfig]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const result = await getProductCategories();
+      console.log('result categories>>', result);
+      if (result.success) {
+        setCategories(result.data);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // Improved handleSuccess callback to actually refresh data
   const handleSuccess = useCallback(() => {
@@ -68,27 +77,39 @@ export default function ProductList() {
 
   // Define columns for the table with all cell rendering logic
   const columns: DataTableColumn<IProduct>[] = [
+    // {
+    //   key: 'product',
+    //   header: 'Product',
+    //   sortable: true,
+    //   filterable: true,
+    //   filterType: 'text',
+    //   cell: (product: IProduct) => (
+    //     <div className="flex items-center gap-3">
+    //       {product.images?.[0] && (
+    //         <Image
+    //           src={product.images[0].url}
+    //           alt={product.name}
+    //           width={40}
+    //           height={40}
+    //           className="rounded-md object-cover"
+    //         />
+    //       )}
+    //       <div className="flex flex-col">
+    //         <p className="font-medium">{product.name}</p>
+    //         <p className="text-sm text-gray-500">{product.sku}</p>
+    //       </div>
+    //     </div>
+    //   ),
+    // },
     {
-      key: 'product',
-      header: 'Product',
+      key: 'name',
+      header: 'Name',
       sortable: true,
       filterable: true,
       filterType: 'text',
       cell: (product: IProduct) => (
-        <div className="flex items-center gap-3">
-          {product.images?.[0] && (
-            <Image
-              src={product.images[0].url}
-              alt={product.name}
-              width={40}
-              height={40}
-              className="rounded-md object-cover"
-            />
-          )}
-          <div className="flex flex-col">
-            <p className="font-medium">{product.name}</p>
-            <p className="text-sm text-gray-500">{product.sku}</p>
-          </div>
+        <div className="flex flex-col">
+          <p className="text-bold text-small">{product.name}</p>
         </div>
       ),
     },
@@ -99,7 +120,7 @@ export default function ProductList() {
       sortable: true,
       filterable: true,
       filterType: 'select',
-      filterOptions: [], // Will be populated with categories
+      filterOptions: categories.map((category) => ({ label: category.name, value: category.id })),
     },
     {
       key: 'price',
@@ -109,6 +130,15 @@ export default function ProductList() {
       filterType: 'number',
       cell: (product: IProduct) => (
         <span className="font-medium">${product.price.toFixed(2)}</span>
+      ),
+    },
+    {
+      key: 'sku',
+      header: 'SKU',
+      sortable: false,
+      filterable: false,
+      cell: (product: IProduct) => (
+        <span className="font-medium">{product.sku}</span>
       ),
     },
     {
@@ -126,22 +156,22 @@ export default function ProductList() {
     {
       key: 'status',
       header: 'Status',
-      sortable: true,
+      sortable: false,
       filterable: true,
       filterType: 'select',
       filterOptions: [
-        { label: 'In Stock', value: true },
-        { label: 'Out of Stock', value: false },
+        { label: 'In Stock', value: 'true' },
+        { label: 'Out of Stock', value: 'false' },
       ],
       cell: (product: IProduct) => (
         <div className="flex gap-2">
           <Chip
             className="capitalize"
-            color={product.status ? 'success' : 'danger'}
+            color={product.status && product.stock > 0 ? 'success' : 'danger'}
             size="sm"
             variant="flat"
           >
-            {product.status ? 'In Stock' : 'Out of Stock'}
+            {(product.status && product.stock > 0) ? 'In Stock' : 'Out of Stock'}
           </Chip>
           {product.featured && (
             <Chip
@@ -203,28 +233,41 @@ export default function ProductList() {
 
   // Additional filters that will be shown outside the filter modal
   const additionalFilters = [
-    <Input
-      key="name-additional-filter"
-      type="text"
-      aria-label="Name"
-      label="Search by Name"
+    <Select
+      key="featured-additional-filter"
+      aria-label="Featured"
+      label="Featured"
       labelPlacement="outside"
-      name="name"
-      placeholder="Filter by name..."
-      value={getFilterValue('name') || ''}
+      name="featured"
+      placeholder="Filter by featured..."
+      value={getFilterValue('featured') || ''}
       onChange={handleInputChange}
       variant="bordered"
-    />,
+    >
+      <SelectItem textValue="true" key="true">True</SelectItem>
+      <SelectItem textValue="false" key="false">False</SelectItem>
+    </Select>,
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="container mx-auto p-4">
       <DataTable
+        title="Products"
+        filterConfig={productFilterConfig}
+        initialVisibleColumns={[
+          'name',
+          'categoryId',
+          'price',
+          'stock',
+          'status',
+          'actions',
+        ]}
         ref={dataTableRef}
         columns={columns}
         fetchData={getProductsWithFilter}
         additionalFilters={additionalFilters}
         onAddNew={handleAddNew}
+        emptyContent="No products found"
       />
       <ProductDrawer
         isOpen={isOpen}

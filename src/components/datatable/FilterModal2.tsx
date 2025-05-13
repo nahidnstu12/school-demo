@@ -443,6 +443,23 @@ export default function FilterModal({
             />
           </div>
         );
+      case 'number':
+        return (
+          <div key={column.key}>
+            <Input
+              type="number"
+              label={column.header}
+              labelPlacement="outside"
+              name={column.key}
+              value={filterValue || ''}
+              onChange={handleLocalInputChange}
+              variant="bordered"
+              className="w-full"
+              placeholder={`Search by ${column.header.toLowerCase()}...`}
+              aria-label={`Search by ${column.header}`}
+            />
+          </div>
+        );
 
       // Text input (default)
       default:

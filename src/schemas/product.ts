@@ -80,11 +80,11 @@ export const productFilterConfig: FilterConfig = {
   defaultSort: { field: 'createdAt', direction: 'desc' as const },
   fields: {
     name: { type: 'string', defaultOperator: 'contains' },
-    category: { type: 'string', defaultOperator: 'equals' },
+    categoryId: { type: 'string', defaultOperator: 'equals' },
     price: { type: 'number', defaultOperator: 'gte' },
     stock: { type: 'number', defaultOperator: 'gte' },
     featured: { type: 'boolean', defaultOperator: 'equals' },
-    createdAt: { type: 'date', defaultOperator: 'equals' },
+    status: { type: 'boolean', defaultOperator: 'equals' },
   },
 };
 

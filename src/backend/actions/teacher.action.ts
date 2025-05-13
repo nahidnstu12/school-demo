@@ -200,7 +200,6 @@ export async function getTeacherDesignations() {
 }
 
 export async function createTeacher(prevState: ActionResult<Teacher>, formData: FormData) {
-  console.log('teacher formData>>', formData);
   return TeacherActionInstance.create(formData);
 }
 

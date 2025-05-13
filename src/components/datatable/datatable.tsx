@@ -173,6 +173,8 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
 
       const result = await fetchData(formData);
 
+      // console.log('result>>', result);
+
       // Only update state if this request wasn't aborted
       if (!abortControllerRef.current.signal.aborted) {
         if (result.success) {

@@ -56,6 +56,8 @@ model ActivityLog {
   ipAddress     String?   @map("ip_address")       // IP address of the user
   userAgent     String?   @map("user_agent")       // User agent information
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime? // When null, the record is active; when set, the record is considered deleted
 
   @@index([userId])
   @@index([institutionId])
@@ -76,6 +78,8 @@ model PermissionLog {
   institutionId String?   @map("institution_id")   // Institution context (if applicable)
   details       Json?                              // Additional details about the change
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime? // When null, the record is active; when set, the record is considered deleted
 
   @@index([userId])
   @@index([targetUserId])
@@ -141,7 +145,10 @@ model RolePermission {
   roleId       String     @map("role_id")
   permissionId String     @map("permission_id")
   createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?  // When null, the record is active; when set, the record is considered deleted
   
+
   // Relationships
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
@@ -161,7 +168,8 @@ model UserRole {
   expiresAt     DateTime?    @map("expires_at") // Optional role expiration date
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  
+  deletedAt     DateTime?    // When null, the record is active; when set, the record is considered deleted
+
   // Relationships
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   role         Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -185,7 +193,8 @@ model UserPermission {
   expiresAt     DateTime?    @map("expires_at") // Optional permission expiration date
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  
+  deletedAt     DateTime?    // When null, the record is active; when set, the record is considered deleted
+
   // Relationships
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   permission   Permission   @relation(fields: [permissionId], references: [id], onDelete: Cascade)
@@ -795,10 +804,11 @@ model Product {
   name        String
   description String?   @db.Text
   price       Decimal   @db.Decimal(10, 2)
-  category    String
+  // category    String
   stock       Int       @default(0)
   sku         String    @unique // Stock keeping unit
   featured    Boolean   @default(false) // Featured product flag
+  status      Boolean   @default(true) // Active/inactive status
   tags        Json      // Product tags and attributes
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -806,11 +816,11 @@ model Product {
 
   // Relationships
   categoryId String?
-  Category   Category?   @relation(fields: [categoryId], references: [id])
+  category   Category?   @relation(fields: [categoryId], references: [id])
   reviews    Review[]
   orderItems OrderItem[]
 
-  @@index([category])
+  @@index([categoryId])
   @@index([deletedAt])
   @@index([featured])
   @@index([price]) // Index for price sorting/filtering
@@ -825,6 +835,7 @@ model Category {
   products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete flag
 
   @@map("categories")
 }
@@ -839,6 +850,7 @@ model Review {
   userId    String   // Reference to user who wrote the review
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete flag
 
   @@index([productId])
   @@index([userId])
@@ -855,6 +867,11 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
   orderId   String  // Reference to parent order
   order     Order   @relation(fields: [orderId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete flag
+
 
   @@index([orderId]) // Index for order lookup
   @@index([productId])
