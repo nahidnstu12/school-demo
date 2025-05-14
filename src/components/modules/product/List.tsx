@@ -158,11 +158,11 @@ export default function ProductList() {
       header: 'Status',
       sortable: false,
       filterable: true,
-      filterType: 'select',
-      filterOptions: [
-        { label: 'In Stock', value: 'true' },
-        { label: 'Out of Stock', value: 'false' },
-      ],
+      filterType: 'checkbox',
+      // filterOptions: [
+      //   { label: 'In Stock', value: 'true' },
+      //   { label: 'Out of Stock', value: 'false' },
+      // ],
       cell: (product: IProduct) => (
         <div className="flex gap-2">
           <Chip

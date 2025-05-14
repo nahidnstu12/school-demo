@@ -23,11 +23,6 @@ interface FilterModalProps {
   filterConfig: FilterConfig;
   getFilterValue: (field: string) => any;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-  // handleSubmit: (e: React.FormEvent) => void;
-  // clearFilters: () => void;
-  // sortValue: string;
-  // handleSortChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  // searchValue: string;
   appliedFiltersCount: number;
   additionalFilterFields?: React.ReactNode[];
 }
@@ -39,11 +34,6 @@ export default function FilterModal({
   filterConfig,
   getFilterValue,
   handleInputChange,
-  // handleSubmit,
-  // clearFilters,
-  // sortValue,
-  // handleSortChange,
-  // searchValue,
   appliedFiltersCount,
   additionalFilterFields
 }: FilterModalProps) {
@@ -51,7 +41,6 @@ export default function FilterModal({
   
   // Get filter state and actions from Zustand store
   const {
-    appliedFiltersCount: zustandAppliedFiltersCount,
     setFilter,
     setRangeFilter,
     applyFilters,
@@ -79,6 +68,8 @@ export default function FilterModal({
         const value = getFilterValue(column.key);
         
         if (value !== undefined) {
+          console.log('value>>', value, column.key, columns);
+          
           currentFilters[column.key] = value;
           console.log(`Setting filter for ${column.key}:`, value);
         }
@@ -254,17 +245,28 @@ export default function FilterModal({
       if (!column) return;
       
       if (typeof value === 'object' && (value.min !== undefined || value.max !== undefined)) {
-        // Handle range filters
-        setRangeFilter(
-          key,
-          value.min ? new Date(value.min) : undefined,
-          value.max ? new Date(value.max) : undefined
-        );
+        console.log('applyLocalFiltersToStore value>>', value, key, column);
+        if (column.filterType === 'dateRange') {
+          // Only convert to Date for dateRange
+          setRangeFilter(
+            key,
+            value.min ? new Date(value.min) : undefined,
+            value.max ? new Date(value.max) : undefined
+          );
+        } else {
+          // For number ranges, just pass the numbers
+          setRangeFilter(
+            key,
+            value.min !== '' ? Number(value.min) : undefined,
+            value.max !== '' ? Number(value.max) : undefined
+          );
+        }
       } else if (key === 'status') {
         // Handle status filter
         if (value === '') {
           setFilter(key, 'equals', null);
         } else {
+          // console.log('status value>>', value);
           setFilter(key, 'equals', value === 'true');
         }
       } else {
@@ -335,6 +337,17 @@ export default function FilterModal({
     }, 100);
   };
 
+  const handleNumberRangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    // Extract the field name (remove 'min' or 'max' prefix, lowercase first letter)
+    const fieldName = name.substring(3).charAt(0).toLowerCase() + name.substring(4);
+    console.log('fieldName>>', fieldName, name, value);
+    setRangeFilter(fieldName, name.startsWith('min') ? Number(value) : undefined, name.startsWith('max') ? Number(value) : undefined);
+
+    // Forward to parent handler
+    handleInputChange(e);
+  };
+
   const renderFilterField = (column: DataTableColumn<any>) => {
     if (column.key === 'search') return null;
     
@@ -342,7 +355,15 @@ export default function FilterModal({
     if (!fieldConfig) return null;
 
     const filterValue = getCurrentValue(column.key);
-    const dateRange = filterValue && typeof filterValue === 'object' ? filterValue : { min: '', max: '' };
+    const dateRange =  column.filterType === "dateRange" ?  filterValue && typeof filterValue === 'object' ? filterValue : { min: '', max: '' }
+          : { min: '', max: '' };
+
+    const numberRange = column.filterType === 'number' ? (filterValue && typeof filterValue === 'object')
+          ? filterValue
+          : { min: '', max: '' }
+          : { min: '', max: '' };
+
+    console.log('numberRange>>', numberRange, filterValue, column.key);
     
     switch (column.filterType) {
       case 'select':
@@ -443,23 +464,37 @@ export default function FilterModal({
             />
           </div>
         );
-      case 'number':
+      case 'number': {
+        
         return (
-          <div key={column.key}>
+          <div key={column.key} className="grid grid-cols-2 gap-2">
             <Input
               type="number"
-              label={column.header}
+              label={`${column.header} Min`}
               labelPlacement="outside"
-              name={column.key}
-              value={filterValue || ''}
-              onChange={handleLocalInputChange}
+              name={`min${column.key}`}
+              value={numberRange.min ?? ''}
+              onChange={handleNumberRangeChange}
               variant="bordered"
               className="w-full"
-              placeholder={`Search by ${column.header.toLowerCase()}...`}
-              aria-label={`Search by ${column.header}`}
+              placeholder={`Min ${column.header.toLowerCase()}...`}
+              aria-label={`Min ${column.header}`}
+            />
+            <Input
+              type="number"
+              label={`${column.header} Max`}
+              labelPlacement="outside"
+              name={`max${column.key}`}
+              value={numberRange.max ?? ''}
+              onChange={handleNumberRangeChange}
+              variant="bordered"
+              className="w-full"
+              placeholder={`Max ${column.header.toLowerCase()}...`}
+              aria-label={`Max ${column.header}`}
             />
           </div>
         );
+      }
 
       // Text input (default)
       default:
