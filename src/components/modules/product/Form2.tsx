@@ -32,10 +32,10 @@ export type ProductData = {
   name: string;
   description?: string;
   price: number;
-  category: string;
+  categoryId: string;
   stock: number;
   sku?: string;
-  featured?: boolean;
+  featured: boolean;
   tags: string[];
 };
 
@@ -66,7 +66,7 @@ export function ProductForm({
       name: "",
       description: "",
       price: 0,
-      category: "",
+      categoryId: "",
       stock: 0,
       sku: "",
       featured: false,
@@ -124,7 +124,7 @@ export function ProductForm({
         name: productData.name || "",
         description: productData.description || "",
         price: Number(productData.price) || 0,
-        category: productData.categoryId || "",
+        categoryId: productData.categoryId || "",
         stock: productData.stock || 0,
         sku: productData.sku || "",
         featured: productData.featured || false,
@@ -153,9 +153,9 @@ export function ProductForm({
 
   // Format options for select components
   const categoryOptions = options?.categories?.map(category => ({
-    id: String(category),
-    value: String(category),
-    label: String(category)
+    id: String(category.id),
+    value: String(category.name),
+    label: String(category.name)
   })) || [];
 
   return (
@@ -194,7 +194,7 @@ export function ProductForm({
       />
 
       <FormSelect
-        name="category"
+        name="categoryId"
         label="Category"
         options={categoryOptions}
         placeholder={loading?.categories ? "Loading categories..." : "Select category"}

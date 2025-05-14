@@ -48,16 +48,6 @@ export default function ProductDrawer({
       <DrawerContent>
         <DrawerHeader className="border-b">
           {getTitle()}
-          <Button
-            isIconOnly
-            variant="light"
-            radius="full"
-            size="sm"
-            onPress={onClose}
-            className="absolute right-4 top-4"
-          >
-            <X size={20} />
-          </Button>
         </DrawerHeader>
 
         <DrawerBody>

@@ -55,6 +55,7 @@ abstract class BaseServerAction<
         return { success: true, data: validatedData };
       } catch (error) {
         if (error instanceof z.ZodError) {
+          console.log("zod error>>", error);
           const errors = error.errors.map((err) => ({
             field: err.path[0],
             message: err.message,

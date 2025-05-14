@@ -1,4 +1,3 @@
-// app/schemas/productSchema.ts
 import { FilterConfig } from '@/utils/filter-helpers';
 import { z } from 'zod';
 
@@ -20,7 +19,7 @@ export const productSchema = z.object({
     .positive({ message: 'Price must be a positive number' })
     .min(0.01, { message: 'Price must be at least 0.01' }),
 
-  category: z.string().min(1, { message: 'Category is required' }),
+  categoryId: z.string().min(1, { message: 'Category is required' }),
 
   stock: z.coerce
     .number()
@@ -33,7 +32,16 @@ export const productSchema = z.object({
     .max(50, { message: 'SKU cannot exceed 50 characters' })
     .optional(),
 
-  featured: z.boolean().default(false).optional(),
+  featured: z.preprocess(
+    (val) => {
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'string') {
+        return val === 'true' || val === 'on';
+      }
+      return false;
+    },
+    z.boolean()
+  ),
 
   //   images: z.array(z.string().url({ message: 'Image must be a valid URL' }))
   //     .optional()

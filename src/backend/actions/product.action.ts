@@ -46,7 +46,7 @@ class ProductServerAction extends RelationalServerAction<
    */
   async create(formData: FormData): Promise<ActionResult<Product>> {
     // Override to use the createSchema
-    const validatedData = this.validateWithSchema(formData, productCreateSchema);
+    const validatedData = this.validateFormData(formData);
 
     if (!validatedData.success) return validatedData;
 
@@ -60,8 +60,8 @@ class ProductServerAction extends RelationalServerAction<
       // Combine with validated data
       const productData = {
         ...validatedData.data,
-        tags,
-        images,
+        // tags,
+        // images,
       };
 
       const result = await this.service.create(productData as Prisma.ProductCreateInput);
@@ -76,7 +76,7 @@ class ProductServerAction extends RelationalServerAction<
    */
   async update(id: string, formData: FormData): Promise<ActionResult<Product>> {
     // Override to use the updateSchema
-    const validatedData = this.validateWithSchema(formData, productUpdateSchema);
+    const validatedData = this.validateFormData(formData);
 
     if (!validatedData.success) return validatedData;
 
@@ -135,36 +135,6 @@ class ProductServerAction extends RelationalServerAction<
       return { success: true, data: products };
     } catch (error) {
       return this.handleServiceError(error);
-    }
-  }
-
-  /**
-   * Helper method to validate with a specific schema
-   */
-  private validateWithSchema(
-    formData: FormData,
-    schema: z.ZodType<any>
-  ):
-    | { success: true; data: any }
-    | { success: false; errors: { field: string | number; message: string }[] } {
-    try {
-      const data = Object.fromEntries(formData.entries()) as Record<string, unknown>;
-
-      // Parse and validate the data with the provided schema
-      const validatedData = schema.parse(data);
-      return { success: true, data: validatedData };
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const errors = error.errors.map((err) => ({
-          field: err.path[0],
-          message: err.message,
-        }));
-        return { success: false, errors };
-      }
-      return {
-        success: false,
-        errors: [{ field: 'unknown', message: 'Unexpected error from form validation' }],
-      };
     }
   }
 
