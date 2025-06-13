@@ -22,7 +22,7 @@ class TeacherService extends BaseService<
   /**
    * Get all designations for dropdown
    */
-  async getAllDesignations(): Promise<string[]> {
+  async getAllDesignations(): Promise<{id: string, name: string}[]> {
     try {
       const teachers = await this.model.findMany({
         distinct: ['designation'],
@@ -31,7 +31,7 @@ class TeacherService extends BaseService<
         },
       });
 
-      return teachers.map((t) => t.designation);
+      return teachers.map((t) => ({id: t.designation, name: t.designation}));
     } catch (error) {
       console.error('Error getting designations:', error);
       throw error;

@@ -7,15 +7,25 @@ export const subjectSchema = z.object({
   levelId: z.string().min(1, "Level are required"),
   name: z.string().min(3, 'Name is required'),
   code: z.string().min(3, 'Code is required').max(12, "big code!"),
-  // Convert string to number for creditHours
+  // Enhanced preprocessing for creditHours
   creditHours: z.preprocess(
-    (val) => (val === '' || val === null || val === undefined) ? undefined : Number(val),
+    (val) => {
+      if (val === '' || val === null || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
     z.number().optional()
   ),
   description: z.string().optional(),
-  // Convert string to boolean for status
+  // Enhanced preprocessing for status
   status: z.preprocess(
-    (val) => val === 'true' || val === true || val === 'on',
+    (val) => {
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'string') {
+        return val === 'true' || val === 'on';
+      }
+      return false;
+    },
     z.boolean()
   ),
 });

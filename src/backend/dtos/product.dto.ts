@@ -19,10 +19,12 @@ class ProductDTO {
       name: product.name,
       description: product.description,
       price: parseFloat(product.price.toString()),
-      category: product.category?.name || product.category,
+      categoryName: product.category?.name,
+      categoryId: product.categoryId,
       stock: product.stock,
       sku: product.sku,
       featured: product.featured,
+      // status: product.status,
       //   images: product.images,
       tags: product.tags,
       createdAt: product.createdAt,
@@ -60,20 +62,23 @@ class ProductDTO {
       name: product.name,
       price: parseFloat(product.price.toString()),
       formattedPrice: `$${parseFloat(product.price.toString()).toFixed(2)}`,
-      category: product.category?.name || product.category,
+      categoryName: product.category?.name,
+      categoryId: product.categoryId,
       stock: product.stock,
       inStock: product.stock > 0,
       featured: product.featured,
+      status: product.status,
+      sku: product.sku,
 
       // Include primary image if available
       //   image: product.images.length > 0 ? product.images[0] : null,
 
       // Brief description excerpt
-      excerpt: product.description
-        ? product.description.length > 100
-          ? `${product.description.substring(0, 97)}...`
-          : product.description
-        : null,
+      // excerpt: product.description
+      //   ? product.description.length > 100
+      //     ? `${product.description.substring(0, 97)}...`
+      //     : product.description
+      //   : null,
 
       // Tag count
       //   tagCount: product.tags.length,
@@ -114,7 +119,8 @@ class ProductDTO {
       id: product.id,
       name: product.name,
       price: parseFloat(product.price.toString()),
-      category: product.category?.name || product.category,
+      categoryName: product.category?.name,
+      categoryId: product.categoryId,
       inStock: product.stock > 0,
       featured: product.featured,
       //   image: product.images.length > 0 ? product.images[0] : null,

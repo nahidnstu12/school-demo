@@ -1,3 +1,5 @@
+import { SortConfig } from "@/stores/types/filter.types";
+
 /**
  * Type definitions for the dynamic filter system
  */
@@ -40,13 +42,20 @@ export type AdvancedFilters = {
   NOT?: SimpleFilter[];
 };
 
-export type FilterState = {
+export interface FilterState {
+  // Filter state
   filters: SimpleFilter[];
   advancedFilters?: AdvancedFilters;
-  sort?: { field: string; direction: 'asc' | 'desc' }[];
   page: number;
   pageSize: number;
-};
+  sort: SortConfig[];
+  config: FilterConfig | null;
+  
+  // UI state
+  isSubmitting: boolean;
+  lastFetchUrl: string;
+  appliedFiltersCount: number;
+}
 
 /**
  * Helper utility to convert between URL params and filter state

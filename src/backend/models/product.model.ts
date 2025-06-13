@@ -189,19 +189,6 @@ class ProductModel extends BaseModel<Product> {
   }
 
   /**
-   * Get distinct categories
-   */
-  async getDistinctCategories(): Promise<string[]> {
-    const categoriesData = await this.prismaClient.$queryRaw<{ category: string }[]>`
-      SELECT DISTINCT category FROM products
-      WHERE deletedAt IS NULL
-      ORDER BY category ASC
-    `;
-
-    return categoriesData.map((c: { category: string }) => c.category);
-  }
-
-  /**
    * Get distinct tags across all products
    */
   async getDistinctTags(): Promise<string[]> {

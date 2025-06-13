@@ -1,11 +1,10 @@
-// components/ui/form/FormProvider.tsx
-import React from "react";
-import { FormProvider as RHFFormProvider, UseFormReturn, FieldValues } from "react-hook-form";
-import { Button, Spinner } from "@heroui/react";
+import { Button, Form } from "@heroui/react";
+import React, { useRef } from "react";
+import { FieldValues, Path, FormProvider as RHFFormProvider, UseFormReturn } from "react-hook-form";
 
 interface FormProviderProps<T extends FieldValues> {
   methods: UseFormReturn<T>;
-  onSubmit: (data: T) => void;
+  actionMethod: (formData: FormData) => void | Promise<void>;
   children: React.ReactNode;
   submitText?: string;
   isReadOnly?: boolean;
@@ -18,7 +17,7 @@ interface FormProviderProps<T extends FieldValues> {
 
 export function FormProvider<T extends FieldValues>({
   methods,
-  onSubmit,
+  actionMethod,
   children,
   submitText = "Submit",
   isReadOnly = false,
@@ -33,9 +32,27 @@ export function FormProvider<T extends FieldValues>({
     ...methods,
     formState: {
       ...methods.formState,
-      serverErrors: serverErrors,
+      errors: {
+        ...methods.formState.errors,
+        serverErrors: serverErrors,
+      },
     },
   };
+
+  // Clear server errors when form values change
+  React.useEffect(() => {
+    if (serverErrors.length > 0) {
+      const subscription = methods.watch(() => {
+        // Clear server errors for each field
+        serverErrors.forEach(error => {
+          if (typeof error.field === 'string') {
+            methods.clearErrors(error.field as Path<T>);
+          }
+        });
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, [methods, serverErrors]);
   
   // Extract form-level errors (non-field specific)
   const formErrors = serverErrors.filter(
@@ -44,10 +61,21 @@ export function FormProvider<T extends FieldValues>({
       error.field === "unknown" || 
       typeof error.field === "number"
   );
+
+  const hiddenSubmitRef = useRef<HTMLButtonElement>(null);
+  const handleValidateAndSubmit = async () => {
+    const isValid = await methods.trigger();
+    if (isValid) {
+      hiddenSubmitRef.current?.click(); // Triggers native formAction via hidden submit button
+    }
+  };
   
   return (
     <RHFFormProvider {...enhancedMethods}>
-      <form onSubmit={methods.handleSubmit(onSubmit)} className={`space-y-6 ${className}`}>
+      <Form
+        action={actionMethod}
+        className={`space-y-6 ${className}`}>
+      {/* <form action={actionMethod} className={`space-y-6 ${className}`}> */}
         {/* Form-level errors */}
         {formErrors.length > 0 && (
           <div className="p-3 mb-4 text-sm text-white bg-red-500 rounded-md">
@@ -56,6 +84,7 @@ export function FormProvider<T extends FieldValues>({
             ))}
           </div>
         )}
+        <button type="submit" ref={hiddenSubmitRef} hidden />
         
         {/* Form fields */}
         {children}
@@ -68,6 +97,7 @@ export function FormProvider<T extends FieldValues>({
               color="primary" 
               isLoading={isPending} 
               isDisabled={isPending}
+              onPress={handleValidateAndSubmit}
             >
               {submitText}
             </Button>
@@ -80,7 +110,8 @@ export function FormProvider<T extends FieldValues>({
             {successMessage}
           </div>
         )}
-      </form>
+      {/* </form> */}
+      </Form>
     </RHFFormProvider>
   );
 }
