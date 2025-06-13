@@ -10,7 +10,7 @@ import {
   Button,
 } from '@heroui/react';
 import { X } from 'lucide-react';
-import { ProductForm } from './Form2';
+import { ProductForm } from './Form';
 
 export type DrawerMode = 'create' | 'read' | 'edit';
 

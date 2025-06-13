@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
 import { ChevronDown, Plus } from 'lucide-react';
-import FilterModal from './FilterModal2';
+import FilterModal from './FilterModal';
 import { DataTableColumn } from './types';
 import { FilterConfig } from '@/utils/filter-helpers';
 import { Selection } from "@heroui/react";
