@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import {
   Drawer,
@@ -7,65 +9,53 @@ import {
   DrawerFooter,
   Button,
 } from '@heroui/react';
-import { TeacherForm } from './Form';
+import { X } from 'lucide-react';
+import { ProductForm } from './Form';
 
 export type DrawerMode = 'create' | 'read' | 'edit';
 
-interface TeacherDrawerProps {
+interface ProductDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   mode: DrawerMode;
-  teacherId?: string;
+  itemId?: string;
   onSuccess?: () => void;
 }
 
-export default function TeacherDrawer({
+export default function ProductDrawer({
   isOpen,
   onClose,
   mode,
-  teacherId,
+  itemId,
   onSuccess,
-}: TeacherDrawerProps) {
+}: ProductDrawerProps) {
   // Get drawer title based on mode
   const getTitle = () => {
     switch (mode) {
       case 'create':
-        return 'Add New Teacher';
+        return 'Add New Product';
       case 'read':
-        return 'Teacher Details';
+        return 'Product Details';
       case 'edit':
-        return 'Edit Teacher';
+        return 'Edit Product';
       default:
-        return 'Teacher';
+        return 'Product';
     }
-  };
-
-  // Handle form success and close drawer
-  const handleFormSuccess = () => {
-    console.log('Form submission successful');
-    
-    // Call the onSuccess callback from parent to trigger data refresh
-    if (onSuccess) {
-      onSuccess();
-    }
-    
-    // Close the drawer after a short delay to show success message
-    setTimeout(() => {
-      onClose();
-    }, 1000);
   };
 
   return (
     <Drawer isOpen={isOpen} onClose={onClose} placement="right" size="lg">
       <DrawerContent>
-        <DrawerHeader className="border-b">{getTitle()}</DrawerHeader>
+        <DrawerHeader className="border-b">
+          {getTitle()}
+        </DrawerHeader>
 
         <DrawerBody>
-          <TeacherForm
-            teacherId={teacherId}
+          <ProductForm
+            productId={itemId}
             mode={mode}
             isReadOnly={mode === 'read'}
-            onSuccess={handleFormSuccess}
+            onSuccess={onSuccess}
           />
         </DrawerBody>
 
@@ -74,11 +64,9 @@ export default function TeacherDrawer({
             <Button variant="flat" onPress={onClose}>
               Close
             </Button>
-
-           
           </div>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
   );
-}
+} 

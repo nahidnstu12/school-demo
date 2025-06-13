@@ -1,6 +1,6 @@
 'use server';
-import { Product, Prisma } from '@prisma/client';
-import { z } from 'zod';
+import { Product, Prisma, Category } from '@prisma/client';
+import { z, ZodType } from 'zod';
 import productSchema, {
   productCreateSchema,
   productFilterConfig,
@@ -10,6 +10,7 @@ import productSchema, {
 import ProductService from '@/backend/services/product.service';
 import { ActionResult } from './IServerAction';
 import { RelationalServerAction, RelationalFilterConfig } from './relation.action';
+import CategoryService from '../services/category.service';
 
 // Convert the product productFilterConfig to a RelationalFilterConfig
 const productRelationalConfig: RelationalFilterConfig = {
@@ -17,11 +18,10 @@ const productRelationalConfig: RelationalFilterConfig = {
   defaultSort: productFilterConfig.defaultSort,
   fields: {
     ...productFilterConfig.fields,
-    name: { type: 'string', defaultOperator: 'contains', urlParam: 'search' },
-    tag: { type: 'string', defaultOperator: 'contains', urlParam: 'tag' },
   },
-  // Define search fields explicitly
-  searchFields: [{ field: 'name' }, { field: 'description' }],
+  include: {
+    category: true,
+  },
 };
 
 class ProductServerAction extends RelationalServerAction<
@@ -31,11 +31,14 @@ class ProductServerAction extends RelationalServerAction<
   Product,
   ProductService
 > {
+  private categoryService: CategoryService;
   constructor(
-    schema: z.ZodType<ProductFormValues> = productSchema,
-    service: ProductService = new ProductService()
+    schema: z.ZodType<ProductFormValues> = productSchema as ZodType<ProductFormValues>,
+    service: ProductService = new ProductService(),
+    categoryService: CategoryService = new CategoryService()
   ) {
     super(schema, service, productRelationalConfig);
+    this.categoryService = categoryService;
   }
 
   /**
@@ -43,7 +46,7 @@ class ProductServerAction extends RelationalServerAction<
    */
   async create(formData: FormData): Promise<ActionResult<Product>> {
     // Override to use the createSchema
-    const validatedData = this.validateWithSchema(formData, productCreateSchema);
+    const validatedData = this.validateFormData(formData);
 
     if (!validatedData.success) return validatedData;
 
@@ -57,8 +60,8 @@ class ProductServerAction extends RelationalServerAction<
       // Combine with validated data
       const productData = {
         ...validatedData.data,
-        tags,
-        images,
+        // tags,
+        // images,
       };
 
       const result = await this.service.create(productData as Prisma.ProductCreateInput);
@@ -73,7 +76,7 @@ class ProductServerAction extends RelationalServerAction<
    */
   async update(id: string, formData: FormData): Promise<ActionResult<Product>> {
     // Override to use the updateSchema
-    const validatedData = this.validateWithSchema(formData, productUpdateSchema);
+    const validatedData = this.validateFormData(formData);
 
     if (!validatedData.success) return validatedData;
 
@@ -101,9 +104,9 @@ class ProductServerAction extends RelationalServerAction<
   /**
    * Get product categories
    */
-  async getProductCategories(): Promise<ActionResult<string[]>> {
+  async getProductCategories(): Promise<ActionResult<Category[]>> {
     try {
-      const categories = await this.service.getDistinctCategories();
+      const categories = await this.categoryService.findAll();
       return { success: true, data: categories };
     } catch (error) {
       return this.handleServiceError(error);
@@ -132,36 +135,6 @@ class ProductServerAction extends RelationalServerAction<
       return { success: true, data: products };
     } catch (error) {
       return this.handleServiceError(error);
-    }
-  }
-
-  /**
-   * Helper method to validate with a specific schema
-   */
-  private validateWithSchema(
-    formData: FormData,
-    schema: z.ZodType<any>
-  ):
-    | { success: true; data: any }
-    | { success: false; errors: { field: string | number; message: string }[] } {
-    try {
-      const data = Object.fromEntries(formData.entries()) as Record<string, unknown>;
-
-      // Parse and validate the data with the provided schema
-      const validatedData = schema.parse(data);
-      return { success: true, data: validatedData };
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const errors = error.errors.map((err) => ({
-          field: err.path[0],
-          message: err.message,
-        }));
-        return { success: false, errors };
-      }
-      return {
-        success: false,
-        errors: [{ field: 'unknown', message: 'Unexpected error from form validation' }],
-      };
     }
   }
 
@@ -230,24 +203,29 @@ class ProductServerAction extends RelationalServerAction<
 const productActionInstance = new ProductServerAction();
 
 // Export server actions for use in components and API routes
-export async function createProduct(formData: FormData) {
+export async function createProduct(prevState: ActionResult<Product>, formData: FormData) {
+  console.log('createProduct action>>', formData);
   return productActionInstance.create(formData);
 }
 
-export async function updateProduct(id: string, formData: FormData) {
+export async function updateProduct(prevState: ActionResult<Product>, id: string, formData: FormData) {
   return productActionInstance.update(id, formData);
 }
 
-export async function deleteProduct(id: string) {
+export async function deleteProduct(id: string | number) {
   return productActionInstance.delete(id);
 }
 
-export async function getProduct(id: string) {
-  return productActionInstance.getById(id);
+export async function getProductById(id: string) {
+  return productActionInstance.findOne({ where: { id } });
 }
 
 export async function getProductsWithFilter(formData: FormData) {
   return productActionInstance.getItemsWithFilter(formData);
+}
+
+export async function getAllProducts(filters: any) {
+  return productActionInstance.getAll(filters);
 }
 
 export async function getProductCategories() {

@@ -3,18 +3,17 @@
 import { getAllInstitutions } from '@/backend/actions/institution.action';
 import { getAllLevels } from '@/backend/actions/level.action';
 import { getSubjectsWithFilter } from '@/backend/actions/subject.action';
-import { DataTable } from '@/components/datatable';
+import { DataTable } from '@/components/datatable/datatable';
 import { DataTableColumn } from '@/components/datatable/types';
-import useTeacherDrawer from '@/hooks/useDrawer';
+import SubjectDrawer from '@/components/modules/subject/Drawer';
+import useDrawer from '@/hooks/useDrawer';
 import { subjectFilterConfig } from '@/schemas/subject';
-import { Button, Chip, DatePicker, Input } from '@heroui/react';
-import { CalendarDate, getLocalTimeZone } from "@internationalized/date";
+import { useFilterStore } from '@/stores/useFilterStore';
+import { FilterConfig } from '@/utils/filter-helpers';
+import { Button, Chip, Input } from '@heroui/react';
 import { Level } from '@prisma/client';
 import { Edit, Eye, Trash } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import SubjectDrawer from './Drawer';
-
 
 // Define subject type with necessary fields for display
 interface ISubject {
@@ -27,167 +26,79 @@ interface ISubject {
   creditHours?: number;
   institutionName?: string;
   levelName?: string;
-  createdAt?: Date;
-}
-
-// Define the structure for additional filter values
-interface AdditionalFilterValue {
-  field: string;
-  operator?: string;
-  value: any;
 }
 
 export default function SubjectList() {
-  const { isOpen, mode, itemId, openDrawer, closeDrawer } = useTeacherDrawer();
-  const router = useRouter();
-  
+  const { isOpen, mode, itemId, openDrawer, closeDrawer } = useDrawer();
+
   // State for filter options
   const [institutionId, setInstitutionId] = useState<string>('');
   const [levels, setLevels] = useState<Level[]>([]);
   const [institutions, setInstitutions] = useState<{ id: string; name: string }[]>([]);
-  
-  // State for additional filter values
-  const [nameFilter, setNameFilter] = useState<string>('');
-  const [createdDateFilter, setCreatedDateFilter] = useState<CalendarDate | null>(null);
-  
-  // Initialize additional filters from URL parameters
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    
-    // Initialize name filter from URL
-    const nameParam = searchParams.get('name');
-    if (nameParam !== null) {
-      setNameFilter(nameParam);
-    }
-    
-    // Initialize date filter from URL
-    const dateParam = searchParams.get('createdAt');
-    if (dateParam) {
-      try {
-        const date = new Date(dateParam);
-        setCreatedDateFilter(new CalendarDate(
-          date.getFullYear(),
-          date.getMonth() + 1,
-          date.getDate()
-        ));
-      } catch (e) {
-        console.error("Error parsing date from URL:", e);
-      }
-    }
-  }, []);
 
   // Reference to the DataTable's refetch function
   const dataTableRef = useRef<{
     refetchData: () => void;
   } | null>(null);
 
-  // Create and maintain a collection of additional filter values
-  const [additionalFilterValues, setAdditionalFilterValues] = useState<AdditionalFilterValue[]>([]);
-  
-  // Update additional filter values whenever their state changes
+  // Get required functions from filter store
+  const { setFilter, getFilterValue, setConfig } = useFilterStore();
+
+  // Set filter config once
   useEffect(() => {
-    const newFilterValues: AdditionalFilterValue[] = [];
-    
-    // Add name filter if it has value (including empty string)
-    if (nameFilter !== undefined) {
-      newFilterValues.push({
-        field: 'name',
-        operator: 'contains',
-        value: nameFilter
-      });
-    }
-    
-    // Add date filter if it has value
-    if (createdDateFilter !== undefined) {
-      try {
-        // Handle null/empty date
-        if (!createdDateFilter) {
-          newFilterValues.push({
-            field: 'createdAt',
-            operator: 'equals',
-            value: ''
-          });
-        } else {
-          // Convert CalendarDate to ISO string
-          const date = createdDateFilter.toDate(getLocalTimeZone());
-          
-          // Set the time to noon to prevent timezone issues
-          const adjustedDate = new Date(
-            date.getFullYear(),
-            date.getMonth(),
-            date.getDate(),
-            12, 0, 0
-          );
-          
-          // Create ISO string
-          const dateString = adjustedDate.toISOString();
-          
-          newFilterValues.push({
-            field: 'createdAt',
-            operator: 'equals',
-            value: dateString
-          });
-        }
-        
-      } catch (e) {
-        console.error("Error converting date:", e);
-      }
-    }
-    
-    // Update the collection of additional filter values
-    setAdditionalFilterValues(newFilterValues);
-  }, [nameFilter, createdDateFilter]);
-
-  // Handle filter application - just trigger the DataTable's apply filters
-  const handleApplyFilters = () => {
-    // No URL manipulation needed - DataTable handles it
-  };
-
-  // Handle clearing of additional filters
-  const handleClearAdditionalFilters = () => {
-    setNameFilter('');
-    setCreatedDateFilter(null);
-  };
+    setConfig(subjectFilterConfig as FilterConfig);
+  }, [setConfig]);
 
   // Improved handleSuccess callback to actually refresh data
   const handleSuccess = useCallback(() => {
     console.log('Subject saved successfully, refreshing data...');
-    
+
+    // Option 2: If you implemented a ref-based approach with the DataTable
     if (dataTableRef.current) {
       dataTableRef.current.refetchData();
     }
-    
+
+    // Close the drawer after success
     closeDrawer();
   }, [closeDrawer]);
 
-  // Fetch institutions on mount
+  // Fetch designations and institutions on mount
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
+        // Fetch institutions
         const institutionsResult = await getAllInstitutions();
-        console.log("institutionsResult>>", institutionsResult);
+        console.log('institutionsResult>>', institutionsResult);
         if (institutionsResult.success) {
           setInstitutions(institutionsResult.data);
         }
       } catch (error) {
-        console.error('Error fetching institutions:', error);
+        console.error('Error fetching metadata:', error);
       }
     };
 
     fetchMetadata();
   }, []);
 
-  // Fetch levels when institutionId changes
+  // Sync institutionId with filter store value
+  useEffect(() => {
+    const storeInstitutionId = getFilterValue('institutionId');
+    if (storeInstitutionId && storeInstitutionId !== institutionId) {
+      setInstitutionId(storeInstitutionId);
+    }
+  }, [getFilterValue, institutionId]);
+
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
+        // Fetch levels
         const filters = institutionId ? { where: { institutionId } } : null;
         const levelsResult = await getAllLevels(filters);
         if (levelsResult.success) {
           setLevels(levelsResult.data);
         }
       } catch (error) {
-        console.error('Error fetching levels:', error);
+        console.error('Error fetching metadata:', error);
       }
     };
 
@@ -200,29 +111,23 @@ export default function SubjectList() {
   }, [openDrawer]);
 
   const handleDelete = useCallback((id: string) => {
+    // Implement delete logic or confirmation dialog
     console.log('Delete subject', id);
   }, []);
 
-  // Define columns for the table
+  // Define columns for the table with all cell rendering logic
   const columns: DataTableColumn<ISubject>[] = [
     {
       key: 'name',
       header: 'Name',
       sortable: true,
-      filterable: false, // Keep as false because we're using additional filter
+      filterable: false, // We can use the filter modal now
       filterType: 'text',
       cell: (subject: ISubject) => (
         <div className="flex flex-col">
           <p className="text-bold text-small">{subject.name}</p>
         </div>
       ),
-    },
-    {
-      key: 'code',
-      header: 'Code',
-      filterable: true,
-      filterType: 'text',
-      cell: (subject: ISubject) => subject.code || 'N/A',
     },
     {
       key: 'institutionId',
@@ -242,6 +147,14 @@ export default function SubjectList() {
       filterOptions: levels.map((l) => ({ label: l.name, value: l.id })),
       cell: (subject: ISubject) => subject.levelName,
     },
+    {
+      key: 'code',
+      header: 'Code',
+      filterable: true,
+      filterType: 'text',
+      cell: (subject: ISubject) => subject.code || 'N/A',
+    },
+
     {
       key: 'status',
       header: 'Status',
@@ -263,15 +176,7 @@ export default function SubjectList() {
         </Chip>
       ),
     },
-    {
-      key: 'createdAt',
-      header: 'Created Date',
-      sortable: true,
-      filterable: false, // Keep as false because we're using additional filter
-      filterType: 'date',
-      cell: (subject: ISubject) => subject.createdAt ? 
-        new Date(subject.createdAt).toLocaleDateString() : 'N/A',
-    },
+
     {
       key: 'actions',
       header: 'Actions',
@@ -308,44 +213,38 @@ export default function SubjectList() {
   ];
 
   const handleInstitutionChange = (value: string) => {
+    // Set local state
     setInstitutionId(value);
+
+    // Update filter store - this will be reflected in the filter modal too
+    setFilter('institutionId', 'equals', value);
   };
 
-  // Handle name filter change
-  const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNameFilter(e.target.value);
+  // Handle changes in the additional filter inputs
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+
+    // Update filter store - this will be reflected in the filter modal too
+    const column = columns.find((col) => col.key === name);
+    const operator = column?.filterType === 'select' ? 'equals' : 'contains';
+
+    setFilter(name, subjectFilterConfig.fields[name]?.defaultOperator || operator, value);
   };
 
-  // Handle date filter change
-  const handleDateFilterChange = (date: CalendarDate | null) => {
-    setCreatedDateFilter(date);
-  };
-
-  // Create additional filters to be rendered inside the DataTable component
+  // Additional filters that will be shown outside the filter modal
   const additionalFilters = [
-    // Name filter
     <Input
-      key="name-filter"
+      key="name-additional-filter"
       type="text"
-      label="Name"
+      aria-label="Name"
+      label="Search by Name"
       labelPlacement="outside"
       name="name"
       placeholder="Filter by name..."
+      value={getFilterValue('name') || ''}
+      onChange={handleInputChange}
       variant="bordered"
-      value={nameFilter}
-      onChange={handleNameFilterChange}
     />,
-    
-    // Created date filter
-    <DatePicker
-      key="created-date-filter"
-      label="Created Date"
-      labelPlacement="outside"
-      name="createdAt"
-      variant="bordered"
-      value={createdDateFilter}
-      onChange={handleDateFilterChange}
-    />
   ];
 
   return (
@@ -354,14 +253,14 @@ export default function SubjectList() {
         title="Subjects"
         columns={columns}
         filterConfig={subjectFilterConfig}
-        fetchData={getSubjectsWithFilter}
+        fetchData={getSubjectsWithFilter} // Using our fetch function
         initialVisibleColumns={[
           'name',
           'code',
           'status',
           'institutionId',
           'levelId',
-          'createdAt',
+          'creditHours',
           'actions',
         ]}
         onAddNew={handleAddNew}
@@ -371,23 +270,19 @@ export default function SubjectList() {
         ref={dataTableRef}
         relationshipFilters={[
           {
-            parentField: "institutionId",
-            childField: "levelId",
-            onParentChange: handleInstitutionChange
-          }
+            parentField: 'institutionId',
+            childField: 'levelId',
+            onParentChange: handleInstitutionChange,
+          },
         ]}
         additionalFilters={additionalFilters}
-        additionalFilterValues={additionalFilterValues}
-        onApplyFilters={handleApplyFilters}
-        onClearFilters={handleClearAdditionalFilters}
       />
-      
       <SubjectDrawer
         isOpen={isOpen}
         onClose={closeDrawer}
         mode={mode}
         subjectId={itemId}
-        onSuccess={handleSuccess}
+        onSuccess={handleSuccess} // Using our improved success handler
       />
     </div>
   );

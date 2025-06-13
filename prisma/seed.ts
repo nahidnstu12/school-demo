@@ -373,7 +373,7 @@ async function main() {
         name: product.name,
         description: product.description,
         price: product.price,
-        category: product.category,
+        // category: product.category,
         categoryId: categoryId,
         stock: product.stock,
         sku: product.sku,

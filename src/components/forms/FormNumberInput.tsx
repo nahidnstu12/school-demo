@@ -47,7 +47,7 @@ export function FormNumberInput({
   };
   
   return (
-    <div>
+    <div className={`w-full ${className}`}>
       <Controller
         name={name}
         control={control}
@@ -65,9 +65,9 @@ export function FormNumberInput({
             step={step}
             isDisabled={isDisabled}
             isRequired={isRequired}
-            isInvalid={!!errors[name] || !!getServerErrors(name)}
+            isInvalid={!!(errors?.[name]) || !!getServerErrors(name)}
             errorMessage={
-              errors[name]?.message as string || 
+              errors?.[name]?.message as string || 
               getServerErrors(name)?.join(", ")
             }
             className={`w-full ${className}`}

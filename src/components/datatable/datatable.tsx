@@ -12,21 +12,16 @@ import {
 } from '@heroui/react';
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { ActionResult } from '@/backend/actions/IServerAction';
-import { useDynamicFilters } from '@/hooks/useDynamicFilter';
-import { FilterConfig, FilterOperator } from '@/utils/filter-helpers';
+import { FilterConfig } from '@/utils/filter-helpers';
+import { useFilterStore } from '@/stores/useFilterStore';
+import { useSyncUrlWithFilterStore } from '@/stores/hooks/useSyncUrlWithFilterStore';
 
-// Import modular components
 import { TopContent } from './TopContent';
 import { TableHeader as TableHeaderComponent } from './TableHeader';
 import { BottomContent } from './BottomContent';
 import { LoadingOverlay } from './LoadingOverlay';
 import { DataTableColumn } from './types';
 
-interface AdditionalFilterValue {
-  field: string;
-  operator?: string;
-  value: any;
-}
 // DataTable props
 interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
@@ -44,10 +39,7 @@ interface DataTableProps<T> {
   }[];
   emptyContent?: React.ReactNode;
   additionalFilters?: React.ReactNode[];
-  additionalFilterValues?: AdditionalFilterValue[];
   title?: string;
-  onApplyFilters?: () => void;
-  onClearFilters?: () => void;
 }
 
 // Define the DataTable ref interface
@@ -67,68 +59,32 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
     relationshipFilters,
     emptyContent = 'No data found',
     additionalFilters,
-    additionalFilterValues = [],
     title,
-    onApplyFilters,
-    onClearFilters,
   }: DataTableProps<T>,
   ref: React.ForwardedRef<DataTableRef>
 ) {
-  // Use the dynamic filters hook
+  // Sync URL with filter store
+  useSyncUrlWithFilterStore(filterConfig);
+  
+  // Get filter state and actions from Zustand store
   const {
-    prismaFilter,
+    filters,
+    page,
+    pageSize,
+    isSubmitting,
+    lastFetchUrl,
+    appliedFiltersCount, // can remove this
     setFilter,
     setRangeFilter,
     applyFilters,
-    setPage,
-    setPageSize,
-    setSort,
+    setPage: setCurrentPage,
+    setPageSize: setCurrentPageSize,
+    setSort: setSortOrder,
     clearAllFilters,
     getFilterValue,
-    page,
-    pageSize,
-  } = useDynamicFilters(filterConfig);
-
-  // Reference to track if initial filters have been applied
-  const initialFiltersAppliedRef = useRef(false);
-
-  // Effect to apply additional filter values when they change
-  useEffect(() => {
-    // Skip if no additional filter values or if they've already been applied on initial render
-    if (additionalFilterValues.length === 0) return;
-
-    // Apply each additional filter
-    additionalFilterValues.forEach(filter => {
-      const { field, operator, value } = filter;
-      
-      // Skip if the value is undefined or null or empty string
-      if (value === undefined || value === null || value === '') return;
-      
-      // Get default operator from filter config or use provided operator
-      const defaultOp = filterConfig.fields[field]?.defaultOperator || 'contains';
-      const finalOperator = operator || defaultOp;
-      
-      // Only update if the value is different from current
-      const currentValue = getFilterValue(field);
-      if (JSON.stringify(currentValue) !== JSON.stringify(value)) {
-        console.log(`Setting additional filter: ${field} ${finalOperator} ${value}`);
-        setFilter(field, finalOperator as FilterOperator, value);
-      }
-    });
-
-    // If this is the first render, apply filters immediately
-    if (!initialFiltersAppliedRef.current) {
-      initialFiltersAppliedRef.current = true;
-      // Only apply if we have actual values to filter by
-      if (additionalFilterValues.some(f => f.value !== undefined && f.value !== null && f.value !== '')) {
-        setTimeout(() => {
-          applyFilters();
-        }, 0);
-      }
-    }
-  }, [additionalFilterValues, setFilter, applyFilters, filterConfig.fields, getFilterValue]);
-
-
+    getPrismaFilter,
+  } = useFilterStore();
+  
   // Calculate default visible columns
   const defaultVisibleColumns =
     initialVisibleColumns || columns.slice(0, Math.min(4, columns.length)).map((col) => col.key);
@@ -141,22 +97,19 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
     direction: 'ascending',
   });
 
-  const [appliedFiltersCount, setAppliedFiltersCount] = useState(0);
-
   // State for data and metadata
   const [data, setData] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [refreshToken, setRefreshToken] = useState(0); // Added to force refresh
+  const [refreshToken, setRefreshToken] = useState(0);
 
   // Local state for current page size to avoid synchronization issues
-  const [currentPageSize, setCurrentPageSize] = useState(pageSize);
+  const [currentPageSize, setLocalPageSize] = useState(pageSize);
 
   // Refs for request tracking
   const abortControllerRef = useRef<AbortController | null>(null);
-  const lastFetchUrlRef = useRef<string>('');
   const pendingFetchRef = useRef<string | null>(null);
-  const pageSizeUpdateInProgress = useRef(false);
+  const lastAppliedFilterRef = useRef<string>('');
 
   // Expose the refetchData method via ref
   useImperativeHandle(ref, () => ({
@@ -176,11 +129,9 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
     }
   }, [selectedKeys, onSelectionChange]);
 
-  // Update local page size state when the hook's page size changes
+  // Update local page size state when the store's page size changes
   useEffect(() => {
-    if (!pageSizeUpdateInProgress.current) {
-      setCurrentPageSize(pageSize);
-    }
+    setLocalPageSize(pageSize);
   }, [pageSize]);
 
   // Process visible columns
@@ -191,32 +142,18 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
     );
   }, [visibleColumns, columns]);
 
-  // Calculate number of active filters
-  useEffect(() => {
-    let count = 0;
-
-    // Count all active filters
-    Object.keys(filterConfig.fields).forEach((key) => {
-      const value = getFilterValue(key);
-      if (value) {
-        if (typeof value === 'object' && (value.min || value.max)) {
-          count++;
-        } else if (value !== '') {
-          count++;
-        }
-      }
-    });
-
-    // Count search as a filter if present
-    if (getFilterValue('search')) {
-      count++;
-    }
-
-    setAppliedFiltersCount(count);
-  }, [prismaFilter, getFilterValue, filterConfig.fields]);
-
   // Function to fetch data based on current filters
   const fetchDataWithFilters = async () => {
+    // Get current Prisma filter
+    const prismaFilter = getPrismaFilter();
+    
+    // Compare with previous filter to avoid duplicate fetches
+    const currentFilterStr = JSON.stringify(prismaFilter);
+    if (currentFilterStr === lastAppliedFilterRef.current && !refreshToken) {
+      console.log('Skipping duplicate fetch with same filter');
+      return;
+    }
+    
     // Abort any ongoing fetch
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -228,20 +165,6 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
     setLoading(true);
 
     try {
-       // Get the CURRENT URL from the browser to ensure we're using the latest params
-       const currentUrl = new URL(window.location.href);
-       const urlString = currentUrl.search;
- 
-       // Skip if URL hasn't changed
-       if (urlString === lastFetchUrlRef.current && urlString !== '') {
-         console.log('Skipping duplicate fetch for URL:', urlString);
-         setLoading(false);
-         return;
-       }
- 
-       // Remember this URL for future deduplication
-       lastFetchUrlRef.current = urlString;
-       
       // Send to server
       const formData = new FormData();
       formData.append('filter', JSON.stringify(prismaFilter));
@@ -249,6 +172,8 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
       console.log('Fetching data with filter:', prismaFilter);
 
       const result = await fetchData(formData);
+
+      // console.log('result>>', result);
 
       // Only update state if this request wasn't aborted
       if (!abortControllerRef.current.signal.aborted) {
@@ -258,6 +183,9 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
         } else {
           console.error('Error fetching data:', result.errors);
         }
+        
+        // Update the last applied filter after successful fetch
+        lastAppliedFilterRef.current = currentFilterStr;
       }
     } catch (error: any) {
       // Only log errors for non-aborted requests
@@ -272,50 +200,85 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
     }
   };
 
-  // Fetch data when prismaFilter changes or refreshToken changes
+  // Modified useEffect for fetching data to avoid double fetches
   useEffect(() => {
-    if (Object.keys(prismaFilter).length > 0) {
-      // Generate a unique ID for this fetch operation
-      const fetchId = Date.now().toString();
-      pendingFetchRef.current = fetchId;
+    // Generate a unique ID for this fetch operation
+    const fetchId = Date.now().toString();
+    pendingFetchRef.current = fetchId;
 
-      // Small delay to ensure URL has been updated in the browser
-      setTimeout(() => {
-        // Only proceed if this is still the most recent fetch request
-        if (pendingFetchRef.current === fetchId) {
-          fetchDataWithFilters();
-        }
-      }, 50);
+    // Check if we're in the middle of a form submission
+    if (isSubmitting) {
+      console.log('Skipping fetch due to ongoing form submission');
+      return;
     }
-  }, [prismaFilter, refreshToken]); // Added refreshToken dependency
+
+    // Compare current URL with the last one we processed
+    const currentUrl = window.location.search;
+    
+    if (currentUrl === lastFetchUrl && refreshToken === 0 && lastFetchUrl !== '') {
+      console.log('Skipping fetch, URL unchanged:', currentUrl);
+      return;
+    }
+
+    // Small delay to ensure URL has been updated in the browser
+    setTimeout(() => {
+      // Only proceed if this is still the most recent fetch request
+      if (pendingFetchRef.current === fetchId) {
+        fetchDataWithFilters();
+      }
+    }, 50);
+  }, [page, pageSize, isSubmitting, lastFetchUrl, refreshToken]);
 
   // Handle form input changes (only updates form state, not URL)
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
+
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFilter(name, 'equals', checked);
     } else if (name.startsWith('min') && name.length > 3) {
-      // Handle date range (min values)
+      // Handle range inputs (both date and number)
       const fieldName = name.substring(3).charAt(0).toLowerCase() + name.substring(4);
-      const minDate = value;
-      const maxDate = getFilterValue(fieldName)?.max;
-      setRangeFilter(
-        fieldName,
-        minDate ? new Date(minDate) : undefined,
-        maxDate ? new Date(maxDate) : undefined
-      );
+      const column = columns.find((col) => col.key === fieldName);
+      const currentValue = getFilterValue(fieldName);
+      
+      if (column?.filterType === 'dateRange') {
+        // Handle date range
+        const minDate = value;
+        const maxDate = currentValue?.max;
+        setRangeFilter(
+          fieldName,
+          minDate ? new Date(minDate) : undefined,
+          maxDate ? new Date(maxDate) : undefined
+        );
+      } else if (column?.filterType === 'number') {
+        // Handle number range
+        const minValue = value !== '' ? Number(value) : undefined;
+        const maxValue = currentValue?.max;
+        setRangeFilter(fieldName, minValue, maxValue);
+      }
     } else if (name.startsWith('max') && name.length > 3) {
-      // Handle date range (max values)
+      // Handle range inputs (both date and number)
       const fieldName = name.substring(3).charAt(0).toLowerCase() + name.substring(4);
-      const minDate = getFilterValue(fieldName)?.min;
-      const maxDate = value;
-      setRangeFilter(
-        fieldName,
-        minDate ? new Date(minDate) : undefined,
-        maxDate ? new Date(maxDate) : undefined
-      );
+      const column = columns.find((col) => col.key === fieldName);
+      const currentValue = getFilterValue(fieldName);
+      
+      if (column?.filterType === 'dateRange') {
+        // Handle date range
+        const minDate = currentValue?.min;
+        const maxDate = value;
+        setRangeFilter(
+          fieldName,
+          minDate ? new Date(minDate) : undefined,
+          maxDate ? new Date(maxDate) : undefined
+        );
+      } else if (column?.filterType === 'number') {
+        // Handle number range
+        const minValue = currentValue?.min;
+        const maxValue = value !== '' ? Number(value) : undefined;
+        setRangeFilter(fieldName, minValue, maxValue);
+      }
     } else {
       // For standard text inputs and selects
       const column = columns.find((col) => col.key === name);
@@ -346,7 +309,7 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
   // Handle sort change from dropdown
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const [field, direction] = e.target.value.split(':');
-    setSort(field, direction as 'asc' | 'desc');
+    setSortOrder(field, direction as 'asc' | 'desc');
   };
 
   // Handle column header sort click
@@ -356,24 +319,19 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
 
     // Apply the sort to server-side
     if (descriptor.column) {
-      setSort(descriptor.column.toString(), descriptor.direction === 'ascending' ? 'asc' : 'desc');
+      setSortOrder(descriptor.column.toString(), descriptor.direction === 'ascending' ? 'asc' : 'desc');
     }
   };
 
   // Handle form submission - this is when we apply filters to URL and trigger data fetch
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    applyFilters(); // Apply form filters to URL and trigger data fetch
-    
-    // Call onApplyFilters if provided
-    if (onApplyFilters) {
-      onApplyFilters();
-    }
+    applyFilters(); // This will update the URL and trigger data fetch
   };
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
-    setPage(newPage); // This will update URL and trigger data fetch
+    setCurrentPage(newPage); // This will update URL and trigger data fetch
   };
 
   // Direct page size handler
@@ -384,80 +342,16 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
       return; // No change, avoid unnecessary updates
     }
 
-    // Mark that page size update is in progress
-    pageSizeUpdateInProgress.current = true;
-
     // Update local state immediately for UI display
+    setLocalPageSize(newSize);
+    
+    // Update the store (this will update URL and trigger data fetch)
     setCurrentPageSize(newSize);
-
-    try {
-      // Create new URLSearchParams from current URL
-      const params = new URLSearchParams(window.location.search);
-
-      // Update parameters directly
-      params.set('pageSize', newSize.toString());
-      params.set('page', '1'); // Reset to page 1
-
-      // Build the new URL
-      const newUrl = `${window.location.pathname}?${params.toString()}`;
-
-      // Update browser URL without reloading
-      window.history.pushState({ path: newUrl }, '', newUrl);
-
-      // Apply the new page size to the filter (this will NOT update URL again)
-      setPageSize(newSize);
-
-      // Now trigger a manual data fetch
-      const updatedFilter = {
-        ...prismaFilter,
-        skip: 0, // Page 1
-        take: newSize,
-      };
-
-      // Send to server
-      const formData = new FormData();
-      formData.append('filter', JSON.stringify(updatedFilter));
-
-      // Set loading state
-      setLoading(true);
-
-      // Execute the fetch
-      fetchData(formData)
-        .then((result) => {
-          if (result.success) {
-            setData(result.data.data);
-            setTotal(result.data.total);
-          }
-          setLoading(false);
-        })
-        .catch((error) => {
-          console.error('Error fetching data after page size change:', error);
-          setLoading(false);
-        });
-    } finally {
-      // Clear the flag after a delay
-      setTimeout(() => {
-        pageSizeUpdateInProgress.current = false;
-      }, 200);
-    }
   };
 
   // Clear all filters
-  const clearFilters = () => {
-    clearAllFilters(); // This will also trigger data fetch
-
-    // // Call onApplyFilters if provided
-    // if (onApplyFilters) {
-    //   onApplyFilters();
-    // }
-
-    // Call onClearFilters if provided
-    if (onClearFilters) {
-      onClearFilters();
-    }
-
-    // Clear additional filters by triggering a refetch
-    setRefreshToken(prev => prev + 1);
+  const handleClearFilters = () => {
+    clearAllFilters(); // This will clear filters, update URL, and trigger data fetch
   };
 
   // Calculate pagination values
@@ -483,6 +377,8 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
 
   // Determine current sort value for the select input
   const sortValue = useMemo(() => {
+    const prismaFilter = getPrismaFilter();
+    
     if (prismaFilter && 'orderBy' in prismaFilter) {
       const orderBy = prismaFilter.orderBy as Record<string, string>;
       const field = Object.keys(orderBy)[0];
@@ -491,12 +387,13 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
         return `${field}:${direction}`;
       }
     }
+    
     return filterConfig.defaultSort
       ? `${filterConfig.defaultSort.field}:${filterConfig.defaultSort.direction}`
       : columns.find((col) => col.sortable)
         ? `${columns.find((col) => col.sortable)?.key}:asc`
         : '';
-  }, [prismaFilter, columns, filterConfig]);
+  }, [filters, getPrismaFilter, columns, filterConfig]);
 
   // Update sort descriptor based on URL sort
   useEffect(() => {
@@ -518,11 +415,11 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
         filterConfig={filterConfig}
         getFilterValue={getFilterValue}
         handleInputChange={handleInputChange}
-        handleSubmit={handleSubmit}
-        clearFilters={clearFilters}
-        sortValue={sortValue}
-        handleSortChange={handleSortChange}
-        searchValue={searchValue}
+        // handleSubmit={handleSubmit}
+        // clearFilters={handleClearFilters}
+        // sortValue={sortValue}
+        // handleSortChange={handleSortChange}
+        // searchValue={searchValue}
         appliedFiltersCount={appliedFiltersCount}
         visibleColumns={visibleColumns}
         setVisibleColumns={setVisibleColumns}
