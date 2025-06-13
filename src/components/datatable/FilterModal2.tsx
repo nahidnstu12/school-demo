@@ -44,7 +44,7 @@ export default function FilterModal({
     setFilter,
     setRangeFilter,
     applyFilters,
-    clearAllFilters
+    clearAllFilters,
   } = useFilterStore();
   
   // Local state to store current filter values
@@ -56,7 +56,6 @@ export default function FilterModal({
   // Update local state when modal opens - this is key to persisting values!
   useEffect(() => {
     if (isOpen) {
-      console.log("Modal opened, updating local filters");
       
       // Create an object to store all current filter values
       const currentFilters: LocalFilters = { 
@@ -68,10 +67,7 @@ export default function FilterModal({
         const value = getFilterValue(column.key);
         
         if (value !== undefined) {
-          console.log('value>>', value, column.key, columns);
-          
           currentFilters[column.key] = value;
-          console.log(`Setting filter for ${column.key}:`, value);
         }
       });
       
@@ -82,12 +78,12 @@ export default function FilterModal({
   }, [isOpen, columns, getFilterValue]);
 
   // Debug to verify filter values are correctly stored
-  useEffect(() => {
-    if (!initialRenderRef.current && isOpen) {
-      console.log("Local filters updated:", localFilters);
-    }
-    initialRenderRef.current = false;
-  }, [localFilters, isOpen]);
+  // useEffect(() => {
+  //   if (!initialRenderRef.current && isOpen) {
+  //     console.log("Local filters updated:", localFilters);
+  //   }
+  //   initialRenderRef.current = false;
+  // }, [localFilters, isOpen]);
 
   // Get only filterable columns
   const filterableColumns = columns.filter(col => col.filterable);
@@ -142,6 +138,8 @@ export default function FilterModal({
       
     setLocalFilters(prev => {
       const updatedFilters = { ...prev };
+
+      
       
       if (name.startsWith('min')) {
         // Handle min date
@@ -245,16 +243,14 @@ export default function FilterModal({
       if (!column) return;
       
       if (typeof value === 'object' && (value.min !== undefined || value.max !== undefined)) {
-        console.log('applyLocalFiltersToStore value>>', value, key, column);
         if (column.filterType === 'dateRange') {
-          // Only convert to Date for dateRange
           setRangeFilter(
             key,
             value.min ? new Date(value.min) : undefined,
             value.max ? new Date(value.max) : undefined
           );
-        } else {
-          // For number ranges, just pass the numbers
+        } else if (column.filterType === 'number') {
+          // Handle number ranges without date conversion
           setRangeFilter(
             key,
             value.min !== '' ? Number(value.min) : undefined,
@@ -266,7 +262,6 @@ export default function FilterModal({
         if (value === '') {
           setFilter(key, 'equals', null);
         } else {
-          // console.log('status value>>', value);
           setFilter(key, 'equals', value === 'true');
         }
       } else {
@@ -341,8 +336,23 @@ export default function FilterModal({
     const { name, value } = e.target;
     // Extract the field name (remove 'min' or 'max' prefix, lowercase first letter)
     const fieldName = name.substring(3).charAt(0).toLowerCase() + name.substring(4);
-    console.log('fieldName>>', fieldName, name, value);
-    setRangeFilter(fieldName, name.startsWith('min') ? Number(value) : undefined, name.startsWith('max') ? Number(value) : undefined);
+    
+    // Update local state for number ranges
+    setLocalFilters(prev => {
+      const updatedFilters = { ...prev };
+      
+      if (!updatedFilters[fieldName]) {
+        updatedFilters[fieldName] = { min: '', max: '' };
+      }
+      
+      if (name.startsWith('min')) {
+        updatedFilters[fieldName].min = value;
+      } else if (name.startsWith('max')) {
+        updatedFilters[fieldName].max = value;
+      }
+      
+      return updatedFilters;
+    });
 
     // Forward to parent handler
     handleInputChange(e);
@@ -363,7 +373,6 @@ export default function FilterModal({
           : { min: '', max: '' }
           : { min: '', max: '' };
 
-    console.log('numberRange>>', numberRange, filterValue, column.key);
     
     switch (column.filterType) {
       case 'select':

@@ -233,247 +233,270 @@ export const DataTable = forwardRef<DataTableRef, DataTableProps<any>>(function 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
+
     if (type === 'checkbox') {
-        const checked = (e.target as HTMLInputElement).checked;
-        setFilter(name, 'equals', checked);
-      } else if (name.startsWith('min') && name.length > 3) {
-        // Handle date range (min values)
-        const fieldName = name.substring(3).charAt(0).toLowerCase() + name.substring(4);
+      const checked = (e.target as HTMLInputElement).checked;
+      setFilter(name, 'equals', checked);
+    } else if (name.startsWith('min') && name.length > 3) {
+      // Handle range inputs (both date and number)
+      const fieldName = name.substring(3).charAt(0).toLowerCase() + name.substring(4);
+      const column = columns.find((col) => col.key === fieldName);
+      const currentValue = getFilterValue(fieldName);
+      
+      if (column?.filterType === 'dateRange') {
+        // Handle date range
         const minDate = value;
-        const maxDate = getFilterValue(fieldName)?.max;
+        const maxDate = currentValue?.max;
         setRangeFilter(
           fieldName,
           minDate ? new Date(minDate) : undefined,
           maxDate ? new Date(maxDate) : undefined
         );
-      } else if (name.startsWith('max') && name.length > 3) {
-        // Handle date range (max values)
-        const fieldName = name.substring(3).charAt(0).toLowerCase() + name.substring(4);
-        const minDate = getFilterValue(fieldName)?.min;
+      } else if (column?.filterType === 'number') {
+        // Handle number range
+        const minValue = value !== '' ? Number(value) : undefined;
+        const maxValue = currentValue?.max;
+        setRangeFilter(fieldName, minValue, maxValue);
+      }
+    } else if (name.startsWith('max') && name.length > 3) {
+      // Handle range inputs (both date and number)
+      const fieldName = name.substring(3).charAt(0).toLowerCase() + name.substring(4);
+      const column = columns.find((col) => col.key === fieldName);
+      const currentValue = getFilterValue(fieldName);
+      
+      if (column?.filterType === 'dateRange') {
+        // Handle date range
+        const minDate = currentValue?.min;
         const maxDate = value;
         setRangeFilter(
           fieldName,
           minDate ? new Date(minDate) : undefined,
           maxDate ? new Date(maxDate) : undefined
         );
+      } else if (column?.filterType === 'number') {
+        // Handle number range
+        const minValue = currentValue?.min;
+        const maxValue = value !== '' ? Number(value) : undefined;
+        setRangeFilter(fieldName, minValue, maxValue);
+      }
+    } else {
+      // For standard text inputs and selects
+      const column = columns.find((col) => col.key === name);
+      const operator = column?.filterType === 'select' ? 'equals' : 'contains';
+
+      if (name === 'status' && value === '') {
+        setFilter(name, 'equals', null);
+      } else if (name === 'status') {
+        setFilter(name, 'equals', value === 'true');
       } else {
-        // For standard text inputs and selects
-        const column = columns.find((col) => col.key === name);
-        const operator = column?.filterType === 'select' ? 'equals' : 'contains';
-  
-        if (name === 'status' && value === '') {
-          setFilter(name, 'equals', null);
-        } else if (name === 'status') {
-          setFilter(name, 'equals', value === 'true');
-        } else {
-          setFilter(name, filterConfig.fields[name]?.defaultOperator || operator, value);
+        setFilter(name, filterConfig.fields[name]?.defaultOperator || operator, value);
+      }
+    }
+
+    // Check for relationship filters
+    if (relationshipFilters) {
+      const isParentField = relationshipFilters.some((rf) => rf.parentField === name);
+      if (isParentField) {
+        // Notify about parent field change
+        const relFilter = relationshipFilters.find((rf) => rf.parentField === name);
+        if (relFilter?.onParentChange) {
+          relFilter.onParentChange(value);
         }
       }
-  
-      // Check for relationship filters
-      if (relationshipFilters) {
-        const isParentField = relationshipFilters.some((rf) => rf.parentField === name);
-        if (isParentField) {
-          // Notify about parent field change
-          const relFilter = relationshipFilters.find((rf) => rf.parentField === name);
-          if (relFilter?.onParentChange) {
-            relFilter.onParentChange(value);
+    }
+  };
+
+  // Handle sort change from dropdown
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const [field, direction] = e.target.value.split(':');
+    setSortOrder(field, direction as 'asc' | 'desc');
+  };
+
+  // Handle column header sort click
+  const handleSortColumnChange = (descriptor: SortDescriptor) => {
+    // Update the sort descriptor for UI
+    setSortDescriptor(descriptor);
+
+    // Apply the sort to server-side
+    if (descriptor.column) {
+      setSortOrder(descriptor.column.toString(), descriptor.direction === 'ascending' ? 'asc' : 'desc');
+    }
+  };
+
+  // Handle form submission - this is when we apply filters to URL and trigger data fetch
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    applyFilters(); // This will update the URL and trigger data fetch
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage); // This will update URL and trigger data fetch
+  };
+
+  // Direct page size handler
+  const handlePageSizeChange = (newSize: number) => {
+    console.log('Page size changing to:', newSize);
+
+    if (newSize === currentPageSize) {
+      return; // No change, avoid unnecessary updates
+    }
+
+    // Update local state immediately for UI display
+    setLocalPageSize(newSize);
+    
+    // Update the store (this will update URL and trigger data fetch)
+    setCurrentPageSize(newSize);
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    clearAllFilters(); // This will clear filters, update URL, and trigger data fetch
+  };
+
+  // Calculate pagination values
+  const pages = Math.ceil(total / currentPageSize);
+  const startItem = (page - 1) * currentPageSize + 1;
+  const endItem = Math.min(page * currentPageSize, total);
+
+  // Pagination handlers
+  const onNextPage = useCallback(() => {
+    if (page < pages) {
+      handlePageChange(page + 1);
+    }
+  }, [page, pages]);
+
+  const onPreviousPage = useCallback(() => {
+    if (page > 1) {
+      handlePageChange(page - 1);
+    }
+  }, [page]);
+
+  // Get filter values
+  const searchValue = getFilterValue('search') || '';
+
+  // Determine current sort value for the select input
+  const sortValue = useMemo(() => {
+    const prismaFilter = getPrismaFilter();
+    
+    if (prismaFilter && 'orderBy' in prismaFilter) {
+      const orderBy = prismaFilter.orderBy as Record<string, string>;
+      const field = Object.keys(orderBy)[0];
+      const direction = orderBy[field];
+      if (field && direction) {
+        return `${field}:${direction}`;
+      }
+    }
+    
+    return filterConfig.defaultSort
+      ? `${filterConfig.defaultSort.field}:${filterConfig.defaultSort.direction}`
+      : columns.find((col) => col.sortable)
+        ? `${columns.find((col) => col.sortable)?.key}:asc`
+        : '';
+  }, [filters, getPrismaFilter, columns, filterConfig]);
+
+  // Update sort descriptor based on URL sort
+  useEffect(() => {
+    if (sortValue) {
+      const [field, direction] = sortValue.split(':');
+      setSortDescriptor({
+        column: field,
+        direction: direction === 'asc' ? 'ascending' : 'descending',
+      });
+    }
+  }, [sortValue]);
+
+  return (
+    <div className="space-y-4">
+      {/* Use the TopContent component */}
+      <TopContent<T>
+        title={title}
+        columns={columns}
+        filterConfig={filterConfig}
+        getFilterValue={getFilterValue}
+        handleInputChange={handleInputChange}
+        // handleSubmit={handleSubmit}
+        // clearFilters={handleClearFilters}
+        // sortValue={sortValue}
+        // handleSortChange={handleSortChange}
+        // searchValue={searchValue}
+        appliedFiltersCount={appliedFiltersCount}
+        visibleColumns={visibleColumns}
+        setVisibleColumns={setVisibleColumns}
+        onAddNew={onAddNew}
+        additionalFilters={additionalFilters}
+      />
+
+      {/* Use the TableHeader component */}
+      <TableHeaderComponent
+        loading={loading}
+        total={total}
+        startItem={startItem}
+        endItem={endItem}
+        currentPageSize={currentPageSize}
+        handlePageSizeChange={handlePageSizeChange}
+        data={data}
+      />
+
+      {/* Table */}
+      <div className="bg-white shadow-md rounded-lg overflow-hidden relative">
+        <LoadingOverlay loading={loading} />
+        <Table
+          isHeaderSticky
+          aria-label="Data table with dynamic filters"
+          bottomContent={
+            <BottomContent
+              selectedKeys={selectedKeys}
+              total={total}
+              page={page}
+              pages={pages}
+              onPreviousPage={onPreviousPage}
+              onNextPage={onNextPage}
+              handlePageChange={handlePageChange}
+            />
           }
-        }
-      }
-    };
-  
-    // Handle sort change from dropdown
-    const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const [field, direction] = e.target.value.split(':');
-      setSortOrder(field, direction as 'asc' | 'desc');
-    };
-  
-    // Handle column header sort click
-    const handleSortColumnChange = (descriptor: SortDescriptor) => {
-      // Update the sort descriptor for UI
-      setSortDescriptor(descriptor);
-  
-      // Apply the sort to server-side
-      if (descriptor.column) {
-        setSortOrder(descriptor.column.toString(), descriptor.direction === 'ascending' ? 'asc' : 'desc');
-      }
-    };
-  
-    // Handle form submission - this is when we apply filters to URL and trigger data fetch
-    const handleSubmit = (e: FormEvent) => {
-      e.preventDefault();
-      applyFilters(); // This will update the URL and trigger data fetch
-    };
-  
-    // Handle page change
-    const handlePageChange = (newPage: number) => {
-      setCurrentPage(newPage); // This will update URL and trigger data fetch
-    };
-  
-    // Direct page size handler
-    const handlePageSizeChange = (newSize: number) => {
-      console.log('Page size changing to:', newSize);
-  
-      if (newSize === currentPageSize) {
-        return; // No change, avoid unnecessary updates
-      }
-  
-      // Update local state immediately for UI display
-      setLocalPageSize(newSize);
-      
-      // Update the store (this will update URL and trigger data fetch)
-      setCurrentPageSize(newSize);
-    };
-  
-    // Clear all filters
-    const handleClearFilters = () => {
-      clearAllFilters(); // This will clear filters, update URL, and trigger data fetch
-    };
-  
-    // Calculate pagination values
-    const pages = Math.ceil(total / currentPageSize);
-    const startItem = (page - 1) * currentPageSize + 1;
-    const endItem = Math.min(page * currentPageSize, total);
-  
-    // Pagination handlers
-    const onNextPage = useCallback(() => {
-      if (page < pages) {
-        handlePageChange(page + 1);
-      }
-    }, [page, pages]);
-  
-    const onPreviousPage = useCallback(() => {
-      if (page > 1) {
-        handlePageChange(page - 1);
-      }
-    }, [page]);
-  
-    // Get filter values
-    const searchValue = getFilterValue('search') || '';
-  
-    // Determine current sort value for the select input
-    const sortValue = useMemo(() => {
-      const prismaFilter = getPrismaFilter();
-      
-      if (prismaFilter && 'orderBy' in prismaFilter) {
-        const orderBy = prismaFilter.orderBy as Record<string, string>;
-        const field = Object.keys(orderBy)[0];
-        const direction = orderBy[field];
-        if (field && direction) {
-          return `${field}:${direction}`;
-        }
-      }
-      
-      return filterConfig.defaultSort
-        ? `${filterConfig.defaultSort.field}:${filterConfig.defaultSort.direction}`
-        : columns.find((col) => col.sortable)
-          ? `${columns.find((col) => col.sortable)?.key}:asc`
-          : '';
-    }, [filters, getPrismaFilter, columns, filterConfig]);
-  
-    // Update sort descriptor based on URL sort
-    useEffect(() => {
-      if (sortValue) {
-        const [field, direction] = sortValue.split(':');
-        setSortDescriptor({
-          column: field,
-          direction: direction === 'asc' ? 'ascending' : 'descending',
-        });
-      }
-    }, [sortValue]);
-  
-    return (
-      <div className="space-y-4">
-        {/* Use the TopContent component */}
-        <TopContent<T>
-          title={title}
-          columns={columns}
-          filterConfig={filterConfig}
-          getFilterValue={getFilterValue}
-          handleInputChange={handleInputChange}
-          // handleSubmit={handleSubmit}
-          // clearFilters={handleClearFilters}
-          // sortValue={sortValue}
-          // handleSortChange={handleSortChange}
-          // searchValue={searchValue}
-          appliedFiltersCount={appliedFiltersCount}
-          visibleColumns={visibleColumns}
-          setVisibleColumns={setVisibleColumns}
-          onAddNew={onAddNew}
-          additionalFilters={additionalFilters}
-        />
-  
-        {/* Use the TableHeader component */}
-        <TableHeaderComponent
-          loading={loading}
-          total={total}
-          startItem={startItem}
-          endItem={endItem}
-          currentPageSize={currentPageSize}
-          handlePageSizeChange={handlePageSizeChange}
-          data={data}
-        />
-  
-        {/* Table */}
-        <div className="bg-white shadow-md rounded-lg overflow-hidden relative">
-          <LoadingOverlay loading={loading} />
-          <Table
-            isHeaderSticky
-            aria-label="Data table with dynamic filters"
-            bottomContent={
-              <BottomContent
-                selectedKeys={selectedKeys}
-                total={total}
-                page={page}
-                pages={pages}
-                onPreviousPage={onPreviousPage}
-                onNextPage={onNextPage}
-                handlePageChange={handlePageChange}
-              />
-            }
-            bottomContentPlacement="outside"
-            classNames={{
-              wrapper: 'max-h-[600px]',
-            }}
-            selectedKeys={selectedKeys}
-            selectionMode={selectionMode}
-            sortDescriptor={sortDescriptor}
-            onSelectionChange={setSelectedKeys}
-            onSortChange={handleSortColumnChange}
+          bottomContentPlacement="outside"
+          classNames={{
+            wrapper: 'max-h-[600px]',
+          }}
+          selectedKeys={selectedKeys}
+          selectionMode={selectionMode}
+          sortDescriptor={sortDescriptor}
+          onSelectionChange={setSelectedKeys}
+          onSortChange={handleSortColumnChange}
+        >
+          <TableHeader columns={headerColumns}>
+            {(column) => (
+              <TableColumn
+                key={column.key}
+                align={column.key === 'actions' ? 'center' : 'start'}
+                allowsSorting={column.sortable}
+              >
+                {column.header}
+              </TableColumn>
+            )}
+          </TableHeader>
+          <TableBody
+            emptyContent={emptyContent}
+            items={data}
+            isLoading={loading && data.length === 0}
+            loadingContent="Loading..."
           >
-            <TableHeader columns={headerColumns}>
-              {(column) => (
-                <TableColumn
-                  key={column.key}
-                  align={column.key === 'actions' ? 'center' : 'start'}
-                  allowsSorting={column.sortable}
-                >
-                  {column.header}
-                </TableColumn>
-              )}
-            </TableHeader>
-            <TableBody
-              emptyContent={emptyContent}
-              items={data}
-              isLoading={loading && data.length === 0}
-              loadingContent="Loading..."
-            >
-              {(item) => (
-                <TableRow key={item.id || `row-${data.indexOf(item)}`}>
-                  {(columnKey) => {
-                    const column = columns.find((col) => col.key === columnKey);
-                    return (
-                      <TableCell>
-                        {column?.cell ? column.cell(item) : item[columnKey as string]}
-                      </TableCell>
-                    );
-                  }}
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+            {(item) => (
+              <TableRow key={item.id || `row-${data.indexOf(item)}`}>
+                {(columnKey) => {
+                  const column = columns.find((col) => col.key === columnKey);
+                  return (
+                    <TableCell>
+                      {column?.cell ? column.cell(item) : item[columnKey as string]}
+                    </TableCell>
+                  );
+                }}
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
-    );
-  });
+    </div>
+  );
+});
